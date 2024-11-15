@@ -119,7 +119,7 @@ project-folder/
 ![Main Page](images/mainpage.png)
 
 ### Results Page
-![Result Page](images/result.png)
+![Result Page](images/results.png)
 
 ---
 
