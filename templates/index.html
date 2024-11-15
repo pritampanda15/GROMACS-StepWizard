@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GROMACS StepWizard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+            color: #333;
+            text-align: center;
+        }
+
+        header {
+            background: #0078D7;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            background: #0078D7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #005fa3;
+        }
+
+        footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>GROMACS StepWizard</h1>
+        <p>Your tool to generate GROMACS production.mdp files easily</p>
+        <p>Need help with parameters? <a href="/info">Click here</a> for detailed explanations.</p>
+    </header>
+    <div class="container">
+        <p>Enter your desired simulation time in either <strong>ps</strong> or <strong>ns</strong>:</p>
+        <form action="/calculate" method="post">
+            <label for="time_ps">Simulation Time (in ps):</label>
+            <input type="number" id="time_ps" name="time_ps" min="1" max="5000000" placeholder="Enter time in ps">
+            <label for="time_ns">OR Simulation Time (in ns):</label>
+            <input type="number" id="time_ns" name="time_ns" min="1" max="5000" placeholder="Enter time in ns">
+            <button type="submit">Calculate</button>
+        </form>
+    </div>
+    <footer>
+        <p>GROMACS StepWizard by Pritam Kumar Panda, Stanford University &copy; 2024</p>
+    </footer>
+</body>
+</html>

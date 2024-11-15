@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GROMACS Parameters</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+            color: #333;
+            text-align: center;
+        }
+        header {
+            background: #0078D7;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+        header h1 {
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        ul li {
+            margin-bottom: 10px;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>GROMACS Parameters</h1>
+    </header>
+    <div class="container">
+        <h2>General Information about Parameters</h2>
+        <ul>
+            {% for param, desc in parameters.items() %}
+                <li><strong>{{ param }}:</strong> {{ desc }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <footer>
+        <p>GROMACS StepWizard by Pritam Kumar Panda, Stanford University &copy; 2024</p>
+    </footer>
+</body>
+</html>
