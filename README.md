@@ -3,6 +3,8 @@
 
 GROMACS StepWizard is a web-based tool designed to help you easily generate `production.mdp` files for GROMACS simulations. It simplifies the process by allowing you to input desired simulation times and automatically calculates the required parameters.
 
+# Access the app here
+https://gromacs-stepwizard-7e3791398062.herokuapp.com 
 ---
 
 ## Features
