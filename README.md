@@ -1,11 +1,10 @@
 
 # GROMACS StepWizard
-
-GROMACS StepWizard is a web-based tool designed to help you easily generate `production.mdp` files for GROMACS simulations. It simplifies the process by allowing you to input desired simulation times and automatically calculates the required parameters.
+Struggling to determine the exact number of steps for your GROMACS molecular dynamics simulations? Meet GROMACS StepWizard – a powerful tool that automates step calculations for your desired simulation time in nanoseconds! GROMACS StepWizard is a also a web-based tool designed to help you easily generate production.mdp files for GROMACS simulations. It simplifies the process by allowing you to input desired simulation times and automatically calculates the required parameters.GROMACS StepWizard is a web-based tool designed to help you easily generate `production.mdp` files for GROMACS simulations. It simplifies the process by allowing you to input desired simulation times and automatically calculates the required parameters.
 
 # Access the app here
-https://gromacs-stepwizard-7e3791398062.herokuapp.com 
----
+
+https://gromacs-stepwizard-7e3791398062.herokuapp.com
 
 ## Features
 
