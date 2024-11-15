@@ -116,10 +116,10 @@ project-folder/
 ## Screenshots
 
 ### Main Page
-(Provide an image of your main page here)
+![Main Page](image/mainpage.png)
 
 ### Results Page
-(Provide an image of the results page here)
+![Result Page](image/result.png)
 
 ---
 
