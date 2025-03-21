@@ -183,5 +183,5 @@ The generated MDP file uses standard parameters suitable for most protein simula
 """)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("Created by [Your Name]")
+st.sidebar.markdown("Created by Pritam Kumar Panda @Stanford University")
 st.sidebar.markdown("[GitHub Repository](https://github.com/pritampanda15)")
