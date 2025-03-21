@@ -4,7 +4,7 @@ Struggling to determine the exact number of steps for your GROMACS molecular dyn
 
 # Access the app here
 
-https://gromacs-stepwizard-7e3791398062.herokuapp.com <br>
+https://gromacs-stepwizard-mlxl5hetcpbozrlc94gtyu.streamlit.app/ <br>
 
 Youtube Link: https://www.youtube.com/watch?v=RWzqH28UeLE 
 
