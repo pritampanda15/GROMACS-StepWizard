@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+:root {
+  --bg-canvas: #f5f5f7;
+  --bg-elevated: rgba(255, 255, 255, 0.84);
+  --bg-solid: #ffffff;
+  --bg-subtle: rgba(0, 0, 0, 0.04);
+  --bg-code: #141519;
+  --border-hairline: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.14);
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #86868b;
+  --accent-blue: #0071e3;
+  --accent-blue-hover: #0077ed;
+  --accent-green: #248a3d;
+  --accent-nvidia: #76b900;
+  --accent-purple: #8944ab;
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.04);
+  --shadow-glass: 0 8px 30px rgba(0, 0, 0, 0.06);
+}
+
+.dark {
+  --bg-canvas: #000000;
+  --bg-elevated: rgba(28, 28, 30, 0.78);
+  --bg-solid: #161618;
+  --bg-subtle: rgba(255, 255, 255, 0.06);
+  --bg-code: #0b0c10;
+  --border-hairline: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text-primary: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-tertiary: #6e6e73;
+  --accent-blue: #2997ff;
+  --accent-blue-hover: #47a6ff;
+  --accent-green: #30d158;
+  --accent-nvidia: #8ee000;
+  --accent-purple: #bf5af2;
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-glass: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+html {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  transition: background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1), color 0.35s ease;
+  overflow-x: hidden;
+}
+
+code, pre, .font-mono {
+  font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.apple-glass {
+  background: var(--bg-elevated);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid var(--border-hairline);
+  box-shadow: var(--shadow-glass);
+}
+
+.apple-card {
+  background: var(--bg-elevated);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--border-hairline);
+  box-shadow: var(--shadow-card);
+  border-radius: 24px;
+}
+
+.apple-input {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-primary);
+  border-radius: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.apple-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.16);
+}
+
+/* Apple-style range slider */
+input[type="range"].apple-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--border-strong);
+  outline: none;
+}
+
+input[type="range"].apple-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 0.5px solid rgba(0, 0, 0, 0.14);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22), 0 0 1px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease;
+}
+
+input[type="range"].apple-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+}
+
+input[type="range"].apple-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 0.5px solid rgba(0, 0, 0, 0.14);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+}
+
+/* Subtle custom scrollbars for code panels */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(134, 134, 139, 0.32);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(134, 134, 139, 0.55);
+}
+
+/* MD Movie Player Scrubber */
+.md-movie-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+}
+.md-movie-scrub::-webkit-slider-runnable-track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+}
+.md-movie-scrub::-moz-range-track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+}
+.md-movie-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -4px;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+}
+.md-movie-scrub::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: 9999px;
+  background: #ffffff;
+}
