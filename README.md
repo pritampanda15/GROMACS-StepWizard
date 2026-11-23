@@ -1,10 +1,13 @@
 # GROMACS StepWizard 2.0
 
+[![Live App](https://img.shields.io/badge/Launch_Live_App-pritampanda15.github.io-0071E3?style=flat-square&logo=githubpages&logoColor=white)](https://pritampanda15.github.io/GROMACS-StepWizard/)
 [![React](https://img.shields.io/badge/React-19-0071E3?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Framer Motion](https://img.shields.io/badge/Framer_Motion-Spring_UI-0055FF?style=flat-square&logo=framer&logoColor=white)](https://www.framer.com/motion/)
 [![NVIDIA CUDA](https://img.shields.io/badge/NVIDIA-CUDA_%2F_NGC_%2F_cuFFTMp-76B900?style=flat-square&logo=nvidia&logoColor=white)](https://catalog.ngc.nvidia.com/orgs/hpc/containers/gromacs)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square)](LICENSE.txt)
+
+**Live App:** https://pritampanda15.github.io/GROMACS-StepWizard/
 
 **Molecular dynamics, precision engineered.**
 
