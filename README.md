@@ -24,19 +24,20 @@
   - **Protein · Ligand Complex** — Explicit-solvent protein–ligand binding dynamics.
 - **Load Local Video**: Preview your own `.mp4` / `.webm` MD movies exported from PyMOL, VMD, ChimeraX, or GROMACS with playback speed controls (`0.5×`–`2×`), timeline scrubbing, and fullscreen mode.
 
-### 2. Step & MDP Wizard
+### 2. Step & MDP Wizard + Full `.zip` Kit & Walltime Planner
 - Instant `nsteps` calculator across **picoseconds (`ps`)**, **nanoseconds (`ns`)**, and **microseconds (`µs`)** with selectable integration timestep (`1 fs`, `2 fs`, `4 fs HMR`), temperature, thermostat (`V-rescale`, `Nose-Hoover`, `berendsen`), barostat (`Parrinello-Rahman`, `C-rescale`), `constraints`, `nstlist`, and `.xtc` save cadence.
-- **7 Curated `.mdp` Presets**:
-  - OPLS-AA Production (NPT)
-  - NVIDIA GPU-Resident High-Throughput (`nstlist = 100`, `C-rescale`, `h-bonds`)
-  - CHARMM36 Asymmetric Lipid Bilayer Production (`step7_production.mdp`, `semiisotropic`, `Force-switch`, 310.15 K)
-  - CHARMM36 Protein–Ligand Production (`Protein_LIG` coupling)
-  - NVT Equilibration (Restrained `-DPOSRES`)
-  - NPT Equilibration (`C-rescale`, `refcoord_scaling = com`)
-  - Energy Minimization (Steepest Descent, `step6.0_minimization.mdp`)
-- Live GPU-resident compatibility check (`Verlet` + `h-bonds`), estimated `.xtc` frame count & trajectory size, syntax-highlighted `.mdp` download, and companion `gmx grompp` / `gmx mdrun` commands.
+- **One-Click Full MD Kit (`.zip`)**: Exports `ions.mdp`, `minim.mdp`, `nvt.mdp`, `npt.mdp`, `production.mdp`, `run_local_gpu.sh`, `slurm_gpu_md.sh`, and `README_KIT.txt` — all synchronized to your exact protocol.
+- **HPC Walltime, SLURM `-maxh` & Storage Estimator**: Select hardware (`H100`, `A100`, `RTX 4090`, `4× A100`, `64c CPU`), system atom count (`10k–1M`), and SLURM queue limit to estimate `ns/day`, wall-clock hours, chained segments, and `.xtc` disk size in GB.
+- **7 Curated `.mdp` Presets** (OPLS-AA, NVIDIA GPU-Resident, CHARMM36 Asymmetric Lipid Bilayer `step7_production.mdp`, CHARMM36 Protein–Ligand, NVT, NPT, Energy Minimization).
 
-### 3. Visual GROMACS CLI Builder
+### 3. Client-Side `.mdp` Sanity Linter & `.xvg` / `md.log` Analyzer (`Inspector`)
+- **`.mdp` Linter & One-Click Auto-Fix**: Audits `.mdp` files for legacy `group` cutoffs, Berendsen barostat/thermostat in production, `all-bonds` blocking `-update gpu`, `.trr` disk bloat, low GPU `nstlist`, and missing `DispCorr` — with one-click fixes and clean `.mdp` export.
+- **`.xvg` & `md.log` Analyzer**: Drag & drop `rmsd.xvg`, `gyrate.xvg`, or `md.log` to render interactive SVG plots with hover statistics (`Mean ± SD`, `Min`, `Max`) and extract GPU `ns/day` throughput and offload tasks.
+
+### 4. macOS `⌘K` Spotlight Command Palette
+- Press `⌘K` (or `Ctrl+K`) anywhere to jump directly to any MDP preset, CLI flag, NVIDIA GPU env var, `Molecular-Dynamics` script, or tool, with one-click command copy.
+
+### 5. Visual GROMACS CLI Builder
 - Toggle between **`gmx` (Thread-MPI)** and **`gmx_mpi` (HPC MPI)** and interactively assemble validated commands across the full MD lifecycle:
   - **`mdrun`**: `-ntmpi`, `-ntomp`, `-npme`, `-nb`, `-pme`, `-bonded`, `-update`, `-nstlist`, `-pin`, `-pinoffset`, `-dlb`, `-tunepme`, `-maxh`, `-cpi`, `-append`
   - **`grompp`**: `-f`, `-c`, `-r`, `-t`, `-p`, `-n`, `-o`, `-maxwarn`
@@ -79,12 +80,12 @@ npm run dev
 ```
 Open `http://localhost:5173/` in your browser.
 
-### Build for Production
+### Build & Auto-Deploy
 ```bash
 npm run build
 npm run preview
 ```
-The static production output in `dist/` can be deployed directly to **Vercel**, **Netlify**, **Cloudflare Pages**, or **GitHub Pages** with zero server configuration.
+Pushes to `main` automatically build and deploy to **GitHub Pages** via [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) (enable **Settings → Pages → Source: GitHub Actions** once in your repo settings to serve at `https://pritampanda15.github.io/GROMACS-StepWizard/`).
 
 ---
 

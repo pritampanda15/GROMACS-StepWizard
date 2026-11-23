@@ -6,7 +6,10 @@ import {
   Cpu,
   Flame,
   Gauge,
+  HardDrive,
   Layers,
+  PackageCheck,
+  Server,
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react';
@@ -21,6 +24,7 @@ import {
   CodeShowcase,
   SegmentedControl,
 } from './ApplePrimitives';
+import { downloadSimulationKitZip } from '../utils/simulationKit';
 
 type TimeUnit = 'ps' | 'ns' | 'us';
 
@@ -35,9 +39,35 @@ const QUICK_TIMES_NS = [
   { label: '5 µs', ns: 5000 },
 ];
 
+interface HardwareProfile {
+  id: string;
+  label: string;
+  short: string;
+  /** Approximate ns/day for a 50,000-atom system at dt=2 fs */
+  nsPerDayAt50k: number;
+}
+
+const HARDWARE_PROFILES: HardwareProfile[] = [
+  { id: 'h100', label: 'NVIDIA H100 (80GB)', short: 'H100', nsPerDayAt50k: 520 },
+  { id: 'a100', label: 'NVIDIA A100 (80GB)', short: 'A100', nsPerDayAt50k: 340 },
+  { id: '4090', label: 'NVIDIA RTX 4090', short: 'RTX 4090', nsPerDayAt50k: 390 },
+  { id: '4xa100', label: '4× NVIDIA A100 (Direct Comm)', short: '4× A100', nsPerDayAt50k: 780 },
+  { id: 'cpu64', label: '64-Core HPC CPU Node', short: '64c CPU', nsPerDayAt50k: 65 },
+];
+
+const SYSTEM_SIZES = [
+  { label: '30k (Peptide)', atoms: 30000 },
+  { label: '65k (Protein)', atoms: 65000 },
+  { label: '150k (Complex)', atoms: 150000 },
+  { label: '250k (Membrane)', atoms: 250000 },
+  { label: '500k (Assembly)', atoms: 500000 },
+  { label: '1M (Capsid)', atoms: 1000000 },
+];
+
 export const StepWizardSection: React.FC<{
   onTelemetryChange?: (dtFs: number, tempK: number) => void;
-}> = ({ onTelemetryChange }) => {
+  externalPresetId?: string | null;
+}> = ({ onTelemetryChange, externalPresetId }) => {
   const [selectedPresetId, setSelectedPresetId] = useState<string>(MDP_PRESETS[0].id);
   const [unit, setUnit] = useState<TimeUnit>('ns');
   const [timeNs, setTimeNs] = useState<number>(100);
@@ -48,6 +78,13 @@ export const StepWizardSection: React.FC<{
   const [tcoupl, setTcoupl] = useState<string>('V-rescale');
   const [pcoupl, setPcoupl] = useState<string>('Parrinello-Rahman');
   const [constraints, setConstraints] = useState<string>('h-bonds');
+
+  // HPC Walltime & Storage Estimator state
+  const [atoms, setAtoms] = useState<number>(65000);
+  const [hardwareId, setHardwareId] = useState<string>('a100');
+  const [queueHours, setQueueHours] = useState<number>(24);
+  const [exportingZip, setExportingZip] = useState<boolean>(false);
+  const [zipToast, setZipToast] = useState<string | null>(null);
 
   const preset = useMemo(
     () => MDP_PRESETS.find((p) => p.id === selectedPresetId) ?? MDP_PRESETS[0],
@@ -68,12 +105,18 @@ export const StepWizardSection: React.FC<{
     if (p.config.nstxoutCompressed > 0) {
       setSaveIntervalPs(Math.max(1, Math.round(p.config.nstxoutCompressed * p.config.dt)));
     }
+    if (id === 'charmm36-lipid-bilayer') setAtoms(250000);
     onTelemetryChange?.(p.config.dt * 1000, p.config.temperature);
   };
 
+  React.useEffect(() => {
+    if (externalPresetId && externalPresetId !== selectedPresetId) {
+      applyPreset(externalPresetId);
+    }
+  }, [externalPresetId]);
+
   const isEM = preset.config.integrator === 'steep';
 
-  // Unit display conversions
   const displayTime = useMemo(() => {
     if (unit === 'ps') return Math.round(timeNs * 1000);
     if (unit === 'us') return Number((timeNs / 1000).toFixed(4));
@@ -92,9 +135,22 @@ export const StepWizardSection: React.FC<{
   const nsteps = isEM ? Math.max(1000, Math.round(timePs * 5)) : Math.max(1, Math.round(timePs / dt));
   const nstxoutCompressed = Math.max(1, Math.round(saveIntervalPs / dt));
   const totalFrames = isEM ? 0 : Math.floor(nsteps / nstxoutCompressed);
-  // Rough estimate: ~220 KB per frame for a typical 50k-atom solvated protein .xtc
-  const estSizeGb = (totalFrames * 0.00022).toFixed(2);
+
+  // Realistic .xtc compressed trajectory footprint (~4.2 bytes / atom / frame)
+  const estSizeGb = (totalFrames * atoms * 4.2) / 1e9;
   const gpuResidentReady = constraints === 'h-bonds' && preset.config.cutoffScheme === 'Verlet';
+
+  // Realistic throughput & walltime estimation
+  const hw = HARDWARE_PROFILES.find((h) => h.id === hardwareId) ?? HARDWARE_PROFILES[1];
+  const dtScale = dt / 0.002;
+  const gpuPenalty = gpuResidentReady || hw.id === 'cpu64' ? 1 : 0.72;
+  const estNsPerDay = Math.max(
+    1,
+    hw.nsPerDayAt50k * Math.pow(50000 / atoms, 0.88) * dtScale * gpuPenalty
+  );
+  const estWallHours = isEM ? 0.05 : (timeNs / estNsPerDay) * 24;
+  const slurmMaxh = Math.max(0.5, Number((queueHours * 0.98).toFixed(1)));
+  const slurmSegments = Math.max(1, Math.ceil(estWallHours / slurmMaxh));
 
   const mdpConfig: MdpConfig = useMemo(
     () => ({
@@ -127,11 +183,28 @@ export const StepWizardSection: React.FC<{
 
   const companionCmd = isEM
     ? `gmx grompp -f ${mdpFilename} -c solv_ions.gro -p topol.top -o em.tpr\ngmx mdrun -v -deffnm em`
-    : `gmx grompp -f ${mdpFilename} -c npt.gro -t npt.cpt -p topol.top -o md_0_1.tpr\ngmx mdrun -v -deffnm md_0_1 -nb gpu -pme gpu -bonded gpu -update gpu -nstlist ${Math.max(nstlist, 40)} -pin on`;
+    : `gmx grompp -f ${mdpFilename} -c npt.gro -t npt.cpt -p topol.top -o md_0_1.tpr\ngmx mdrun -v -deffnm md_0_1 -nb gpu -pme gpu -bonded gpu -update gpu -nstlist ${Math.max(nstlist, 40)} -pin on -maxh ${slurmMaxh}`;
+
+  const handleDownloadKit = async () => {
+    setExportingZip(true);
+    try {
+      const filename = await downloadSimulationKitZip({
+        productionConfig: mdpConfig,
+        presetName: preset.name,
+        mdpFilename,
+        slurmMaxh,
+        estimatedNsPerDay: estNsPerDay,
+      });
+      setZipToast(`Exported ${filename} (8 files)`);
+      setTimeout(() => setZipToast(null), 3200);
+    } finally {
+      setExportingZip(false);
+    }
+  };
 
   return (
     <section className="space-y-6">
-      {/* Preset Strip */}
+      {/* Preset Strip + One-Click ZIP Bundle Export */}
       <div className="apple-card p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
@@ -142,9 +215,24 @@ export const StepWizardSection: React.FC<{
               Choose an MDP Protocol Preset
             </h2>
           </div>
-          <span className="text-[12px] text-[var(--text-secondary)] font-mono">
-            {preset.source}
-          </span>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {zipToast && (
+              <span className="text-[12px] font-medium text-[#248a3d] dark:text-[#30d158] bg-[#30d158]/14 px-3 py-1.5 rounded-full">
+                {zipToast}
+              </span>
+            )}
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              disabled={exportingZip}
+              onClick={handleDownloadKit}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-[13px] font-medium shadow-[0_6px_18px_rgba(0,113,227,0.28)] transition-colors cursor-pointer disabled:opacity-60"
+            >
+              <PackageCheck className="w-4 h-4" />
+              <span>{exportingZip ? 'Packaging ZIP...' : 'Download Full MD Kit (.zip)'}</span>
+            </motion.button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -217,7 +305,13 @@ export const StepWizardSection: React.FC<{
           <div className="mt-2 text-[26px] sm:text-[30px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
             <AnimatedNumber
               value={timeNs}
-              format={(v) => (v >= 1000 ? `${(v / 1000).toFixed(2)} µs` : v < 1 ? `${Math.round(v * 1000)} ps` : `${v.toFixed(v % 1 === 0 ? 0 : 1)} ns`)}
+              format={(v) =>
+                v >= 1000
+                  ? `${(v / 1000).toFixed(2)} µs`
+                  : v < 1
+                  ? `${Math.round(v * 1000)} ps`
+                  : `${v.toFixed(v % 1 === 0 ? 0 : 1)} ns`
+              }
             />
           </div>
           <div className="mt-1 text-[11.5px] text-[var(--text-tertiary)] tabular-nums">
@@ -234,7 +328,9 @@ export const StepWizardSection: React.FC<{
             <AnimatedNumber value={totalFrames} />
           </div>
           <div className="mt-1 text-[11.5px] text-[var(--text-tertiary)] tabular-nums">
-            {isEM ? 'Minimization coordinates only' : `Every ${saveIntervalPs} ps (~${estSizeGb} GB / 50k atoms)`}
+            {isEM
+              ? 'Minimization coordinates only'
+              : `Every ${saveIntervalPs} ps (~${estSizeGb.toFixed(2)} GB @ ${(atoms / 1000).toFixed(0)}k atoms)`}
           </div>
         </div>
 
@@ -242,9 +338,7 @@ export const StepWizardSection: React.FC<{
           <div className="flex items-center justify-between text-[var(--text-secondary)] text-[12px] font-medium">
             <span>GPU-Resident Ready</span>
             <CheckCircle2
-              className={`w-4 h-4 ${
-                gpuResidentReady ? 'text-[#30d158]' : 'text-[#ff9f0a]'
-              }`}
+              className={`w-4 h-4 ${gpuResidentReady ? 'text-[#30d158]' : 'text-[#ff9f0a]'}`}
             />
           </div>
           <div
@@ -264,7 +358,6 @@ export const StepWizardSection: React.FC<{
 
       {/* Main Split: Controls + Live MDP Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Controls */}
         <div className="lg:col-span-5 apple-card p-5 sm:p-6 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -286,7 +379,6 @@ export const StepWizardSection: React.FC<{
             />
           </div>
 
-          {/* Duration Input + Slider */}
           <div className="space-y-3">
             <div className="flex items-center justify-between text-[13px]">
               <label htmlFor="sim-time-input" className="font-medium text-[var(--text-primary)]">
@@ -351,7 +443,6 @@ export const StepWizardSection: React.FC<{
 
           <hr className="border-[var(--border-hairline)]" />
 
-          {/* Timestep & Temperature */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[12.5px] font-medium text-[var(--text-secondary)] flex items-center gap-1.5">
@@ -398,7 +489,6 @@ export const StepWizardSection: React.FC<{
             </div>
           </div>
 
-          {/* Thermostat, Barostat, Constraints, nstlist */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-[12px] font-medium text-[var(--text-secondary)]">
@@ -488,7 +578,6 @@ export const StepWizardSection: React.FC<{
           )}
         </div>
 
-        {/* Right Live Code Preview */}
         <div className="lg:col-span-7 space-y-4">
           <CodeShowcase
             title={mdpFilename}
@@ -507,6 +596,153 @@ export const StepWizardSection: React.FC<{
             compact
             maxHeight="140px"
           />
+        </div>
+      </div>
+
+      {/* HPC Walltime, SLURM -maxh & Storage Estimator */}
+      <div className="apple-card p-5 sm:p-6 space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#248a3d] dark:text-[#30d158] inline-flex items-center gap-1.5">
+              <Server className="w-3.5 h-3.5" /> HPC Capacity & Queue Planner
+            </span>
+            <h3 className="text-[18px] sm:text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mt-0.5">
+              Walltime, SLURM <code className="font-mono text-[16px]">-maxh</code> &amp; Storage Estimator
+            </h3>
+          </div>
+          <span className="text-[12px] text-[var(--text-secondary)]">
+            Illustrative scaling estimates for planning SLURM allocations
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+          <div className="lg:col-span-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+                  Target Compute Hardware
+                </label>
+                <select
+                  value={hardwareId}
+                  onChange={(e) => setHardwareId(e.target.value)}
+                  className="apple-input w-full px-3 py-2 text-[13px] mt-1"
+                >
+                  {HARDWARE_PROFILES.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+                  SLURM Queue Limit (hours)
+                </label>
+                <select
+                  value={queueHours}
+                  onChange={(e) => setQueueHours(Number(e.target.value))}
+                  className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                >
+                  <option value={12}>12 hours (-maxh 11.8)</option>
+                  <option value={24}>24 hours (-maxh 23.5)</option>
+                  <option value={48}>48 hours (-maxh 47.0)</option>
+                  <option value={72}>72 hours (-maxh 70.6)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span className="font-medium text-[var(--text-secondary)]">
+                  System Atom Count (Protein + Solvent + Ions)
+                </span>
+                <span className="font-mono font-semibold text-[var(--text-primary)] tabular-nums">
+                  {atoms.toLocaleString()} atoms
+                </span>
+              </div>
+              <input
+                type="range"
+                min={10000}
+                max={1000000}
+                step={5000}
+                value={atoms}
+                onChange={(e) => setAtoms(Number(e.target.value))}
+                className="apple-slider w-full"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {SYSTEM_SIZES.map((s) => (
+                  <button
+                    key={s.label}
+                    type="button"
+                    onClick={() => setAtoms(s.atoms)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer ${
+                      atoms === s.atoms
+                        ? 'bg-[var(--accent-blue)] text-white'
+                        : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-6 grid grid-cols-2 gap-3">
+            <div className="p-4 rounded-[18px] bg-[var(--bg-subtle)] border border-[var(--border-hairline)]">
+              <div className="text-[11.5px] text-[var(--text-secondary)] font-medium">
+                Est. Throughput ({hw.short})
+              </div>
+              <div className="mt-1 text-[24px] font-semibold tracking-[-0.025em] text-[#248a3d] dark:text-[#30d158]">
+                <AnimatedNumber value={estNsPerDay} format={(v) => `${Math.round(v)} ns/d`} />
+              </div>
+              <div className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                @ dt = {dt * 1000} fs
+              </div>
+            </div>
+
+            <div className="p-4 rounded-[18px] bg-[var(--bg-subtle)] border border-[var(--border-hairline)]">
+              <div className="text-[11.5px] text-[var(--text-secondary)] font-medium">
+                Est. Wall-Clock Time
+              </div>
+              <div className="mt-1 text-[24px] font-semibold tracking-[-0.025em] text-[var(--text-primary)]">
+                <AnimatedNumber
+                  value={estWallHours}
+                  format={(h) => (h >= 48 ? `${(h / 24).toFixed(1)} days` : `${h.toFixed(1)} hrs`)}
+                />
+              </div>
+              <div className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                For {timeNs >= 1000 ? `${(timeNs / 1000).toFixed(2)} µs` : `${timeNs} ns`}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-[18px] bg-[var(--bg-subtle)] border border-[var(--border-hairline)]">
+              <div className="text-[11.5px] text-[var(--text-secondary)] font-medium">
+                SLURM Chained Segments
+              </div>
+              <div className="mt-1 text-[24px] font-semibold tracking-[-0.025em] text-[var(--accent-blue)]">
+                <AnimatedNumber value={slurmSegments} format={(n) => `${Math.max(1, Math.round(n))} job${Math.round(n) > 1 ? 's' : ''}`} />
+              </div>
+              <div className="text-[11px] font-mono text-[var(--text-tertiary)] mt-0.5">
+                -maxh {slurmMaxh} -cpi -append
+              </div>
+            </div>
+
+            <div className="p-4 rounded-[18px] bg-[var(--bg-subtle)] border border-[var(--border-hairline)]">
+              <div className="text-[11.5px] text-[var(--text-secondary)] font-medium flex items-center gap-1">
+                <HardDrive className="w-3.5 h-3.5" /> Est. .xtc Disk Size
+              </div>
+              <div className="mt-1 text-[24px] font-semibold tracking-[-0.025em] text-[var(--text-primary)]">
+                <AnimatedNumber
+                  value={estSizeGb}
+                  format={(g) => (g < 1 ? `${Math.round(g * 1024)} MB` : `${g.toFixed(2)} GB`)}
+                />
+              </div>
+              <div className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                {totalFrames.toLocaleString()} frames · System group
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

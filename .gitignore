@@ -6,3 +6,8 @@ dist/
 *.tsbuildinfo
 src/components/Cinema.tsx
 public/scenes/
+bin/
+lib/
+pyvenv.cfg
+__pycache__/
+*.pyc

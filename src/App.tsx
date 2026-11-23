@@ -4,6 +4,8 @@ import {
   Atom,
   BookOpen,
   ChevronRight,
+  Command,
+  FileSearch,
   FolderGit2,
   Gauge,
   Moon,
@@ -17,17 +19,19 @@ import { StepWizardSection } from './components/StepWizardSection';
 import { CommandBuilderSection } from './components/CommandBuilderSection';
 import { NvidiaGpuStudio } from './components/NvidiaGpuStudio';
 import { ScriptVaultSection } from './components/ScriptVaultSection';
+import { AnalyzerSection } from './components/AnalyzerSection';
 import { ReferenceSection } from './components/ReferenceSection';
+import { SpotlightPalette, SpotlightTarget } from './components/SpotlightPalette';
 
-type WorkspaceTab = 'wizard' | 'cli' | 'gpu' | 'scripts' | 'reference';
+type WorkspaceTab = SpotlightTarget;
 
 const PIPELINE_STAGES: { label: string; cmd: string; target: WorkspaceTab }[] = [
   { label: 'Topology', cmd: 'pdb2gmx', target: 'cli' },
   { label: 'Box & Solvent', cmd: 'editconf + solvate', target: 'cli' },
   { label: 'Ions', cmd: 'genion', target: 'cli' },
-  { label: 'Minimize & Equil', cmd: 'MDP presets', target: 'wizard' },
+  { label: 'Minimize & Equil', cmd: 'MDP + ZIP kit', target: 'wizard' },
   { label: 'GPU Production', cmd: 'mdrun -update gpu', target: 'gpu' },
-  { label: 'PBC & RMSD', cmd: 'trjconv + rms', target: 'scripts' },
+  { label: 'Lint & Plot', cmd: '.mdp / .xvg / .log', target: 'inspector' },
   { label: 'PCA / FEL', cmd: 'covar + sham', target: 'scripts' },
   { label: 'ΔG_bind', cmd: 'gmx_MMPBSA', target: 'scripts' },
 ];
@@ -40,13 +44,27 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('wizard');
   const [heroDtFs, setHeroDtFs] = useState<number>(2);
   const [heroTempK, setHeroTempK] = useState<number>(300);
+  const [spotlightOpen, setSpotlightOpen] = useState<boolean>(false);
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
   }, [dark]);
 
-  const jumpToWorkspace = (tab: WorkspaceTab) => {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSpotlightOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const jumpToWorkspace = (tab: WorkspaceTab, presetId?: string) => {
     setActiveTab(tab);
+    if (presetId) setSelectedPresetId(presetId);
     const el = document.getElementById('workspace-anchor');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -55,13 +73,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SpotlightPalette
+        open={spotlightOpen}
+        onClose={() => setSpotlightOpen(false)}
+        onNavigate={jumpToWorkspace}
+      />
+
       {/* Sticky Apple Translucent Navigation Bar */}
       <header className="sticky top-0 z-50 border-b border-[var(--border-hairline)] apple-glass">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2.5 text-left cursor-pointer group"
+            className="flex items-center gap-2.5 text-left cursor-pointer group shrink-0"
           >
             <div className="w-9 h-9 rounded-[11px] bg-gradient-to-br from-[#0071e3] to-[#5ac8fa] text-white flex items-center justify-center shadow-[0_4px_14px_rgba(0,113,227,0.35)] group-hover:scale-105 transition-transform">
               <Atom className="w-5 h-5" />
@@ -71,12 +95,12 @@ export default function App() {
                 GROMACS StepWizard
               </div>
               <div className="text-[11px] text-[var(--text-secondary)]">
-                MD Studio • NVIDIA GPU & HPC
+                MD Studio • NVIDIA GPU &amp; HPC
               </div>
             </div>
           </button>
 
-          <div className="hidden lg:block">
+          <div className="hidden xl:block">
             <SegmentedControl<WorkspaceTab>
               layoutId="top-nav-pill"
               size="sm"
@@ -87,12 +111,27 @@ export default function App() {
                 { value: 'cli', label: 'CLI Builder', icon: <Terminal className="w-3.5 h-3.5" /> },
                 { value: 'gpu', label: 'NVIDIA GPU', icon: <Zap className="w-3.5 h-3.5" /> },
                 { value: 'scripts', label: 'Script Vault', icon: <FolderGit2 className="w-3.5 h-3.5" /> },
+                { value: 'inspector', label: 'Inspector', icon: <FileSearch className="w-3.5 h-3.5" /> },
                 { value: 'reference', label: 'Docs & Flags', icon: <BookOpen className="w-3.5 h-3.5" /> },
               ]}
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={() => setSpotlightOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-hairline)] hover:border-[var(--accent-blue)] text-[12px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              title="Open Spotlight Command Palette (⌘K / Ctrl+K)"
+            >
+              <Command className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
+              <span className="hidden sm:inline">Search</span>
+              <kbd className="font-mono text-[10.5px] px-1.5 py-0.5 rounded bg-[var(--bg-solid)] border border-[var(--border-hairline)] text-[var(--text-tertiary)]">
+                ⌘K
+              </kbd>
+            </motion.button>
+
             <motion.button
               whileTap={{ scale: 0.92 }}
               type="button"
@@ -107,7 +146,7 @@ export default function App() {
         </div>
 
         {/* Mobile / Tablet Navigation Bar */}
-        <div className="lg:hidden px-4 pb-2.5 overflow-x-auto">
+        <div className="xl:hidden px-4 pb-2.5 overflow-x-auto">
           <SegmentedControl<WorkspaceTab>
             layoutId="mobile-nav-pill"
             size="sm"
@@ -118,13 +157,14 @@ export default function App() {
               { value: 'cli', label: 'CLI Builder' },
               { value: 'gpu', label: 'NVIDIA GPU' },
               { value: 'scripts', label: 'Scripts' },
+              { value: 'inspector', label: 'Inspector' },
               { value: 'reference', label: 'Reference' },
             ]}
           />
         </div>
       </header>
 
-      {/* Hero Section with Interactive Molecular Dynamics Motion Graphic */}
+      {/* Hero Section with MD Trajectory Movie Player */}
       <div className="relative overflow-hidden">
         <div
           className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[460px] rounded-full blur-3xl opacity-45"
@@ -156,7 +196,7 @@ export default function App() {
               </h1>
 
               <p className="text-[16px] sm:text-[17.5px] leading-[1.55] text-[var(--text-secondary)] max-w-xl">
-                Calculate exact <code className="font-mono text-[14.5px] text-[var(--text-primary)]">nsteps</code>, generate OPLS &amp; CHARMM36 <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.mdp</code> files, assemble NVIDIA GPU-resident <code className="font-mono text-[14.5px] text-[var(--text-primary)]">gmx mdrun</code> flags, and customize production SLURM, MPS/MIG, PCA/FEL, and <code className="font-mono text-[14.5px] text-[var(--text-primary)]">gmx_MMPBSA</code> scripts — entirely in your browser.
+                Calculate exact <code className="font-mono text-[14.5px] text-[var(--text-primary)]">nsteps</code>, export complete <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.zip</code> simulation kits, assemble NVIDIA GPU-resident <code className="font-mono text-[14.5px] text-[var(--text-primary)]">gmx mdrun</code> flags, lint <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.mdp</code> files, and plot <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.xvg</code> / <code className="font-mono text-[14.5px] text-[var(--text-primary)]">md.log</code> benchmarks — entirely in your browser.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -175,6 +215,14 @@ export default function App() {
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-full apple-glass text-[14px] font-medium text-[var(--text-primary)] hover:border-[var(--accent-blue)] transition-colors cursor-pointer"
                 >
                   <Zap className="w-4 h-4 text-[#30d158]" /> NVIDIA GPU Studio
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  type="button"
+                  onClick={() => jumpToWorkspace('inspector')}
+                  className="inline-flex items-center gap-2 px-4 py-3 rounded-full apple-glass text-[14px] font-medium text-[var(--text-primary)] hover:border-[var(--accent-blue)] transition-colors cursor-pointer"
+                >
+                  <FileSearch className="w-4 h-4 text-[var(--accent-blue)]" /> Lint .mdp / Plot .xvg
                 </motion.button>
               </div>
             </motion.div>
@@ -234,6 +282,7 @@ export default function App() {
           >
             {activeTab === 'wizard' && (
               <StepWizardSection
+                externalPresetId={selectedPresetId}
                 onTelemetryChange={(dtFs, tempK) => {
                   setHeroDtFs(dtFs);
                   setHeroTempK(tempK);
@@ -243,6 +292,7 @@ export default function App() {
             {activeTab === 'cli' && <CommandBuilderSection />}
             {activeTab === 'gpu' && <NvidiaGpuStudio />}
             {activeTab === 'scripts' && <ScriptVaultSection />}
+            {activeTab === 'inspector' && <AnalyzerSection />}
             {activeTab === 'reference' && <ReferenceSection />}
           </motion.div>
         </AnimatePresence>
@@ -274,7 +324,7 @@ export default function App() {
               NVIDIA NGC
             </a>
             <a
-              href="https://github.com/pritampanda15"
+              href="https://github.com/pritampanda15/GROMACS-StepWizard"
               target="_blank"
               rel="noreferrer"
               className="hover:text-[var(--accent-blue)] transition-colors"
