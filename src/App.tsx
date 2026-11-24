@@ -3,8 +3,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Atom,
   BookOpen,
+  Check,
   ChevronRight,
   Command,
+  Copy,
   FileSearch,
   FolderGit2,
   Gauge,
@@ -13,8 +15,7 @@ import {
   Terminal,
   Zap,
 } from 'lucide-react';
-import { APPLE_SPRING, SegmentedControl } from './components/ApplePrimitives';
-import { MdMoviePlayer } from './components/MdMoviePlayer';
+import { UI_SPRING, SegmentedControl } from './components/UiPrimitives';
 import { StepWizardSection } from './components/StepWizardSection';
 import { CommandBuilderSection } from './components/CommandBuilderSection';
 import { NvidiaGpuStudio } from './components/NvidiaGpuStudio';
@@ -36,6 +37,9 @@ const PIPELINE_STAGES: { label: string; cmd: string; target: WorkspaceTab }[] = 
   { label: 'ΔG_bind', cmd: 'gmx_MMPBSA', target: 'scripts' },
 ];
 
+const QUICK_GPU_CMD =
+  'gmx mdrun -v -deffnm md_0_1 -nb gpu -pme gpu -bonded gpu -update gpu -nstlist 100 -pin on';
+
 export default function App() {
   const [dark, setDark] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -46,6 +50,7 @@ export default function App() {
   const [heroTempK, setHeroTempK] = useState<number>(300);
   const [spotlightOpen, setSpotlightOpen] = useState<boolean>(false);
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [copiedHeroCmd, setCopiedHeroCmd] = useState<boolean>(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
@@ -71,6 +76,24 @@ export default function App() {
     }
   };
 
+  const copyQuickCmd = async () => {
+    try {
+      await navigator.clipboard.writeText(QUICK_GPU_CMD);
+    } catch {
+      // ignore clipboard errors
+    }
+    setCopiedHeroCmd(true);
+    setTimeout(() => setCopiedHeroCmd(false), 1600);
+  };
+
+  const dtPs = heroDtFs / 1000;
+  const quickConversions = [
+    { label: '1 ns', steps: Math.round(1000 / dtPs) },
+    { label: '10 ns', steps: Math.round(10000 / dtPs) },
+    { label: '100 ns', steps: Math.round(100000 / dtPs) },
+    { label: '1 µs', steps: Math.round(1000000 / dtPs) },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col">
       <SpotlightPalette
@@ -79,8 +102,8 @@ export default function App() {
         onNavigate={jumpToWorkspace}
       />
 
-      {/* Sticky Apple Translucent Navigation Bar */}
-      <header className="sticky top-0 z-50 border-b border-[var(--border-hairline)] apple-glass">
+      {/* Sticky Navigation Bar */}
+      <header className="sticky top-0 z-50 border-b border-[var(--border-hairline)] glass-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <button
             type="button"
@@ -95,7 +118,7 @@ export default function App() {
                 GROMACS StepWizard
               </div>
               <div className="text-[11px] text-[var(--text-secondary)]">
-                MD Studio • NVIDIA GPU &amp; HPC
+                MD Setup · NVIDIA GPU &amp; HPC
               </div>
             </div>
           </button>
@@ -123,7 +146,7 @@ export default function App() {
               type="button"
               onClick={() => setSpotlightOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-hairline)] hover:border-[var(--accent-blue)] text-[12px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-              title="Open Spotlight Command Palette (⌘K / Ctrl+K)"
+              title="Open Quick Search (⌘K / Ctrl+K)"
             >
               <Command className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
               <span className="hidden sm:inline">Search</span>
@@ -137,8 +160,8 @@ export default function App() {
               type="button"
               onClick={() => setDark((d) => !d)}
               className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--bg-subtle)] border border-[var(--border-hairline)] text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors cursor-pointer"
-              aria-label="Toggle Light and Dark appearance"
-              title={dark ? 'Switch to Apple Light Studio' : 'Switch to Apple Pro Dark'}
+              aria-label="Toggle Light and Dark theme"
+              title={dark ? 'Switch to Light theme' : 'Switch to Dark theme'}
             >
               {dark ? <Sun className="w-4 h-4 text-[#ffd60a]" /> : <Moon className="w-4 h-4" />}
             </motion.button>
@@ -164,39 +187,39 @@ export default function App() {
         </div>
       </header>
 
-      {/* Hero Section with MD Trajectory Movie Player */}
+      {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div
-          className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[460px] rounded-full blur-3xl opacity-45"
+          className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[440px] rounded-full blur-3xl opacity-45"
           style={{
             background: dark
-              ? 'radial-gradient(ellipse at center, rgba(41,151,255,0.22), rgba(48,209,88,0.08) 55%, transparent 75%)'
-              : 'radial-gradient(ellipse at center, rgba(0,113,227,0.14), rgba(90,200,250,0.09) 55%, transparent 75%)',
+              ? 'radial-gradient(ellipse at center, rgba(41,151,255,0.2), rgba(48,209,88,0.08) 55%, transparent 75%)'
+              : 'radial-gradient(ellipse at center, rgba(0,113,227,0.12), rgba(90,200,250,0.08) 55%, transparent 75%)',
           }}
         />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-8 sm:pt-14 sm:pb-10 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-8 sm:pt-12 sm:pb-10 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <motion.div
-              initial={{ opacity: 0, y: 18 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-6 space-y-5"
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-7 space-y-5"
             >
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full apple-glass text-[12px] font-medium text-[var(--text-secondary)]">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-surface text-[12px] font-medium text-[var(--text-secondary)]">
                 <span className="w-2 h-2 rounded-full bg-[#30d158]" />
-                <span>GROMACS 2024+ • NVIDIA CUDA / NGC / cuFFTMp • Molecular-Dynamics Suite</span>
+                <span>GROMACS 2024+ · NVIDIA CUDA / NGC / cuFFTMp · Client-Side Studio</span>
               </div>
 
-              <h1 className="text-[38px] sm:text-[50px] font-semibold tracking-[-0.035em] leading-[1.06] text-[var(--text-primary)]">
-                Molecular dynamics,{' '}
+              <h1 className="text-[36px] sm:text-[48px] font-semibold tracking-[-0.035em] leading-[1.08] text-[var(--text-primary)]">
+                GROMACS simulation setup,{' '}
                 <span className="bg-gradient-to-r from-[#0071e3] via-[#5ac8fa] to-[#30d158] bg-clip-text text-transparent">
-                  precision engineered.
+                  engineered for clarity.
                 </span>
               </h1>
 
-              <p className="text-[16px] sm:text-[17.5px] leading-[1.55] text-[var(--text-secondary)] max-w-xl">
-                Calculate exact <code className="font-mono text-[14.5px] text-[var(--text-primary)]">nsteps</code>, export complete <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.zip</code> simulation kits, assemble NVIDIA GPU-resident <code className="font-mono text-[14.5px] text-[var(--text-primary)]">gmx mdrun</code> flags, lint <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.mdp</code> files, and plot <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.xvg</code> / <code className="font-mono text-[14.5px] text-[var(--text-primary)]">md.log</code> benchmarks — entirely in your browser.
+              <p className="text-[16px] sm:text-[17px] leading-[1.58] text-[var(--text-secondary)] max-w-2xl">
+                Calculate exact <code className="font-mono text-[14.5px] text-[var(--text-primary)]">nsteps</code>, export complete <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.zip</code> simulation kits, assemble NVIDIA GPU-resident <code className="font-mono text-[14.5px] text-[var(--text-primary)]">gmx mdrun</code> flags, lint <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.mdp</code> files, and inspect <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.xvg</code> / <code className="font-mono text-[14.5px] text-[var(--text-primary)]">md.log</code> outputs directly in your browser.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -206,13 +229,13 @@ export default function App() {
                   onClick={() => jumpToWorkspace('wizard')}
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-[14px] font-medium shadow-[0_8px_22px_rgba(0,113,227,0.3)] transition-colors cursor-pointer"
                 >
-                  Launch StepWizard <ChevronRight className="w-4 h-4" />
+                  Open Step Calculator <ChevronRight className="w-4 h-4" />
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.96 }}
                   type="button"
                   onClick={() => jumpToWorkspace('gpu')}
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full apple-glass text-[14px] font-medium text-[var(--text-primary)] hover:border-[var(--accent-blue)] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full glass-surface text-[14px] font-medium text-[var(--text-primary)] hover:border-[var(--accent-blue)] transition-colors cursor-pointer"
                 >
                   <Zap className="w-4 h-4 text-[#30d158]" /> NVIDIA GPU Studio
                 </motion.button>
@@ -220,20 +243,76 @@ export default function App() {
                   whileTap={{ scale: 0.96 }}
                   type="button"
                   onClick={() => jumpToWorkspace('inspector')}
-                  className="inline-flex items-center gap-2 px-4 py-3 rounded-full apple-glass text-[14px] font-medium text-[var(--text-primary)] hover:border-[var(--accent-blue)] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-3 rounded-full glass-surface text-[14px] font-medium text-[var(--text-primary)] hover:border-[var(--accent-blue)] transition-colors cursor-pointer"
                 >
                   <FileSearch className="w-4 h-4 text-[var(--accent-blue)]" /> Lint .mdp / Plot .xvg
                 </motion.button>
               </div>
             </motion.div>
 
+            {/* Quick Step Reference & GPU Launch Card */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
-              className="lg:col-span-6"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
+              className="lg:col-span-5 surface-card p-5 sm:p-6 space-y-4"
             >
-              <MdMoviePlayer dtFs={heroDtFs} temperatureK={heroTempK} />
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)]">
+                    Live Step Reference
+                  </div>
+                  <div className="text-[15px] font-semibold text-[var(--text-primary)]">
+                    dt = {heroDtFs} fs ({dtPs} ps) · {heroTempK} K
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-medium bg-[#30d158]/14 text-[#248a3d] dark:text-[#30d158]">
+                  Verlet + h-bonds
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {quickConversions.map((row) => (
+                  <div
+                    key={row.label}
+                    className="p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-hairline)]"
+                  >
+                    <div className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                      {row.label}
+                    </div>
+                    <div className="text-[16px] font-semibold font-mono tabular-nums text-[var(--text-primary)] mt-0.5">
+                      {row.steps.toLocaleString()}
+                    </div>
+                    <div className="text-[10.5px] text-[var(--text-tertiary)]">nsteps</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl bg-[var(--bg-code)] text-[#e6edf3] p-3.5 border border-white/10 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-mono text-white/55">
+                    GPU-Resident Quick Launch
+                  </span>
+                  <button
+                    type="button"
+                    onClick={copyQuickCmd}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[11px] text-white transition cursor-pointer"
+                  >
+                    {copiedHeroCmd ? (
+                      <>
+                        <Check className="w-3 h-3 text-[#30d158]" /> Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" /> Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+                <code className="block text-[11.5px] font-mono text-[#a5d6ff] leading-relaxed break-all">
+                  {QUICK_GPU_CMD}
+                </code>
+              </div>
             </motion.div>
           </div>
 
@@ -241,8 +320,8 @@ export default function App() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.16 }}
-            className="mt-8 apple-card p-3 sm:p-3.5"
+            transition={{ duration: 0.45, delay: 0.12 }}
+            className="mt-8 surface-card p-3 sm:p-3.5"
           >
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
               {PIPELINE_STAGES.map((stage, idx) => (
@@ -278,7 +357,7 @@ export default function App() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={APPLE_SPRING}
+            transition={UI_SPRING}
           >
             {activeTab === 'wizard' && (
               <StepWizardSection
@@ -298,13 +377,13 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Apple-style Minimal Footer */}
+      {/* Footer */}
       <footer className="border-t border-[var(--border-hairline)] py-8 text-[12.5px] text-[var(--text-secondary)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <strong className="text-[var(--text-primary)] font-medium">GROMACS StepWizard 2.0</strong>{' '}
+            <strong className="text-[var(--text-primary)] font-medium">GROMACS StepWizard</strong>{' '}
             — Created by Pritam Kumar Panda, Stanford University. Integrated with{' '}
-            <span className="font-mono text-[11.5px]">Molecular-Dynamics</span>, Official GROMACS Docs &amp; NVIDIA NGC/CUDA Guides.
+            <span className="font-mono text-[11.5px]">Molecular-Dynamics</span>, GROMACS Docs &amp; NVIDIA NGC/CUDA Guides.
           </div>
           <div className="flex items-center gap-4">
             <a

@@ -2,7 +2,7 @@
 
 :root {
   --bg-canvas: #f5f5f7;
-  --bg-elevated: rgba(255, 255, 255, 0.84);
+  --bg-elevated: rgba(255, 255, 255, 0.86);
   --bg-solid: #ffffff;
   --bg-subtle: rgba(0, 0, 0, 0.04);
   --bg-code: #141519;
@@ -22,7 +22,7 @@
 
 .dark {
   --bg-canvas: #000000;
-  --bg-elevated: rgba(28, 28, 30, 0.78);
+  --bg-elevated: rgba(28, 28, 30, 0.8);
   --bg-solid: #161618;
   --bg-subtle: rgba(255, 255, 255, 0.06);
   --bg-code: #0b0c10;
@@ -41,7 +41,7 @@
 }
 
 html {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-canvas);
   color: var(--text-primary);
   scroll-behavior: smooth;
@@ -57,14 +57,14 @@ body {
 }
 
 code, pre, .font-mono {
-  font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-.apple-glass {
+.glass-surface {
   background: var(--bg-elevated);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
@@ -72,7 +72,7 @@ code, pre, .font-mono {
   box-shadow: var(--shadow-glass);
 }
 
-.apple-card {
+.surface-card {
   background: var(--bg-elevated);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
@@ -81,7 +81,7 @@ code, pre, .font-mono {
   border-radius: 24px;
 }
 
-.apple-input {
+.ui-input {
   background: var(--bg-subtle);
   border: 1px solid var(--border-hairline);
   color: var(--text-primary);
@@ -89,14 +89,14 @@ code, pre, .font-mono {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-.apple-input:focus {
+.ui-input:focus {
   outline: none;
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.16);
 }
 
-/* Apple-style range slider */
-input[type="range"].apple-slider {
+/* Range slider */
+input[type="range"].ui-slider {
   -webkit-appearance: none;
   appearance: none;
   height: 6px;
@@ -105,7 +105,7 @@ input[type="range"].apple-slider {
   outline: none;
 }
 
-input[type="range"].apple-slider::-webkit-slider-thumb {
+input[type="range"].ui-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 22px;
@@ -118,12 +118,12 @@ input[type="range"].apple-slider::-webkit-slider-thumb {
   transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease;
 }
 
-input[type="range"].apple-slider::-webkit-slider-thumb:hover {
+input[type="range"].ui-slider::-webkit-slider-thumb:hover {
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
 }
 
-input[type="range"].apple-slider::-moz-range-thumb {
+input[type="range"].ui-slider::-moz-range-thumb {
   width: 22px;
   height: 22px;
   border-radius: 9999px;
@@ -133,7 +133,7 @@ input[type="range"].apple-slider::-moz-range-thumb {
   cursor: pointer;
 }
 
-/* Subtle custom scrollbars for code panels */
+/* Custom scrollbars for code panels */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -147,39 +147,4 @@ input[type="range"].apple-slider::-moz-range-thumb {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(134, 134, 139, 0.55);
-}
-
-/* MD Movie Player Scrubber */
-.md-movie-scrub {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 14px;
-  background: transparent;
-  cursor: pointer;
-}
-.md-movie-scrub::-webkit-slider-runnable-track {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 9999px;
-}
-.md-movie-scrub::-moz-range-track {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 9999px;
-}
-.md-movie-scrub::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 11px;
-  height: 11px;
-  margin-top: -4px;
-  border-radius: 9999px;
-  background: #ffffff;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
-}
-.md-movie-scrub::-moz-range-thumb {
-  width: 11px;
-  height: 11px;
-  border: 0;
-  border-radius: 9999px;
-  background: #ffffff;
 }

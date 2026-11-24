@@ -12,7 +12,7 @@ import {
   Wand2,
   XCircle,
 } from 'lucide-react';
-import { CodeShowcase, SegmentedControl } from './ApplePrimitives';
+import { CodeShowcase, SegmentedControl } from './UiPrimitives';
 
 type InspectorMode = 'mdp' | 'xvg';
 
@@ -454,7 +454,7 @@ export const AnalyzerSection: React.FC = () => {
 
   return (
     <section className="space-y-6">
-      <div className="apple-card p-5 sm:p-6">
+      <div className="surface-card p-5 sm:p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)] inline-flex items-center gap-1.5">
@@ -484,7 +484,7 @@ export const AnalyzerSection: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left: Drop/Paste MDP */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="apple-card p-5 space-y-3">
+            <div className="surface-card p-5 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[14px] font-semibold text-[var(--text-primary)]">
                   Paste or Upload `.mdp` File
@@ -519,7 +519,7 @@ export const AnalyzerSection: React.FC = () => {
                 onChange={(e) => setMdpText(e.target.value)}
                 rows={14}
                 spellCheck={false}
-                className="apple-input w-full p-3.5 font-mono text-[12px] leading-relaxed resize-y"
+                className="ui-input w-full p-3.5 font-mono text-[12px] leading-relaxed resize-y"
               />
             </div>
 
@@ -536,7 +536,7 @@ export const AnalyzerSection: React.FC = () => {
 
           {/* Right: Diagnostic Findings */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="apple-card p-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="surface-card p-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div
                   className={`w-11 h-11 rounded-2xl flex items-center justify-center ${
@@ -583,7 +583,7 @@ export const AnalyzerSection: React.FC = () => {
 
             <div className="space-y-3">
               {issues.map((issue) => (
-                <div key={issue.id} className="apple-card p-4 space-y-2">
+                <div key={issue.id} className="surface-card p-4 space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-2.5">
                       {issue.severity === 'error' ? (
@@ -626,7 +626,7 @@ export const AnalyzerSection: React.FC = () => {
       ) : (
         <div className="space-y-5">
           {/* Upload & Sample Bar */}
-          <div className="apple-card p-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="surface-card p-5 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
@@ -686,7 +686,7 @@ export const AnalyzerSection: React.FC = () => {
                   ['Final Value', xvgStats.last.toFixed(3)],
                   ['Data Points', xvgStats.count.toLocaleString()],
                 ].map(([lbl, val]) => (
-                  <div key={lbl} className="apple-card p-4">
+                  <div key={lbl} className="surface-card p-4">
                     <div className="text-[11px] font-medium text-[var(--text-secondary)]">{lbl}</div>
                     <div className="text-[18px] font-semibold font-mono tabular-nums text-[var(--text-primary)] mt-1">
                       {val}
@@ -695,8 +695,8 @@ export const AnalyzerSection: React.FC = () => {
                 ))}
               </div>
 
-              {/* Crisp Apple Interactive SVG Chart */}
-              <div className="apple-card p-5 sm:p-6">
+              {/* Crisp Interactive SVG Chart */}
+              <div className="surface-card p-5 sm:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                   <div>
                     <h3 className="text-[17px] font-semibold text-[var(--text-primary)]">
@@ -795,7 +795,7 @@ export const AnalyzerSection: React.FC = () => {
             </div>
           ) : parsedLog ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="apple-card p-5">
+              <div className="surface-card p-5">
                 <div className="text-[12px] text-[var(--text-secondary)]">Measured Throughput</div>
                 <div className="text-[32px] font-semibold tracking-[-0.03em] text-[#248a3d] dark:text-[#30d158] mt-1 tabular-nums">
                   {parsedLog.nsPerDay != null ? `${parsedLog.nsPerDay.toFixed(1)} ns/day` : 'Not found'}
@@ -805,7 +805,7 @@ export const AnalyzerSection: React.FC = () => {
                 </div>
               </div>
 
-              <div className="apple-card p-5">
+              <div className="surface-card p-5">
                 <div className="text-[12px] text-[var(--text-secondary)]">Detected Hardware</div>
                 <div className="text-[16px] font-semibold text-[var(--text-primary)] mt-1.5 leading-snug">
                   {parsedLog.gpuName}
@@ -815,7 +815,7 @@ export const AnalyzerSection: React.FC = () => {
                 </div>
               </div>
 
-              <div className="apple-card p-5">
+              <div className="surface-card p-5">
                 <div className="text-[12px] text-[var(--text-secondary)]">GPU Task Offload</div>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {parsedLog.gpuTasks.length > 0 ? (

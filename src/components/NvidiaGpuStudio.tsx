@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Container, Cpu, Layers, Network, Server, Zap } from 'lucide-react';
-import { AppleSwitch, CodeShowcase, SegmentedControl } from './ApplePrimitives';
+import { ToggleSwitch, CodeShowcase, SegmentedControl } from './UiPrimitives';
 import { GpuOffloadDiagram, GpuPipelineState } from './GpuOffloadDiagram';
 
 type GpuScenario = 'single' | 'multigpu' | 'cufftmp' | 'ngc' | 'mps' | 'mig';
@@ -226,7 +226,7 @@ export const NvidiaGpuStudio: React.FC = () => {
 
   return (
     <section className="space-y-6">
-      <div className="apple-card p-5 sm:p-6">
+      <div className="surface-card p-5 sm:p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#248a3d] dark:text-[#30d158]">
@@ -264,7 +264,7 @@ export const NvidiaGpuStudio: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Configuration Panel */}
-        <div className="lg:col-span-5 apple-card p-5 sm:p-6 space-y-4">
+        <div className="lg:col-span-5 surface-card p-5 sm:p-6 space-y-4">
           <h3 className="text-[16px] font-semibold tracking-[-0.02em]">
             Hardware & Runtime Parameters
           </h3>
@@ -277,7 +277,7 @@ export const NvidiaGpuStudio: React.FC = () => {
               <input
                 value={deffnm}
                 onChange={(e) => setDeffnm(e.target.value)}
-                className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
               />
             </div>
             <div>
@@ -290,7 +290,7 @@ export const NvidiaGpuStudio: React.FC = () => {
                 max={32}
                 value={ntomp}
                 onChange={(e) => setNtomp(Math.max(1, Number(e.target.value)))}
-                className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
               />
             </div>
           </div>
@@ -310,7 +310,7 @@ export const NvidiaGpuStudio: React.FC = () => {
                 onChange={(e) =>
                   setPipeline((p) => ({ ...p, gpus: Number(e.target.value) }))
                 }
-                className="apple-slider w-full mt-2"
+                className="ui-slider w-full mt-2"
               />
             </div>
           )}
@@ -334,7 +334,7 @@ export const NvidiaGpuStudio: React.FC = () => {
                 <input
                   value={ngcTag}
                   onChange={(e) => setNgcTag(e.target.value)}
-                  className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                 />
               </div>
             </div>
@@ -363,7 +363,7 @@ export const NvidiaGpuStudio: React.FC = () => {
                   max={8}
                   value={mpsCount}
                   onChange={(e) => setMpsCount(Number(e.target.value))}
-                  className="apple-slider w-full mt-2"
+                  className="ui-slider w-full mt-2"
                 />
               </div>
             </div>
@@ -379,7 +379,7 @@ export const NvidiaGpuStudio: React.FC = () => {
                 onChange={(e) =>
                   setMigProfile(e.target.value as '1g.10gb' | '2g.20gb' | '3g.40gb')
                 }
-                className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
               >
                 <option value="1g.10gb">1g.10gb (4+ slices — small soluble proteins)</option>
                 <option value="2g.20gb">2g.20gb (2–3 slices — medium complexes)</option>
@@ -389,28 +389,28 @@ export const NvidiaGpuStudio: React.FC = () => {
           )}
 
           <div className="divide-y divide-[var(--border-hairline)] pt-2">
-            <AppleSwitch
+            <ToggleSwitch
               checked={pipeline.directComm}
               onChange={(v) => setPipeline((p) => ({ ...p, directComm: v }))}
               label="GMX_ENABLE_DIRECT_GPU_COMM=1"
               description="Direct GPU-to-GPU halo & PME-PP comms (GROMACS 2022+)"
               accent="green"
             />
-            <AppleSwitch
+            <ToggleSwitch
               checked={pipeline.cudaGraph}
               onChange={(v) => setPipeline((p) => ({ ...p, cudaGraph: v }))}
               label="GMX_CUDA_GRAPH=1"
               description="Reduces CUDA kernel launch overhead on single-GPU runs (2023+)"
               accent="green"
             />
-            <AppleSwitch
+            <ToggleSwitch
               checked={pipeline.pmeDecomp}
               onChange={(v) => setPipeline((p) => ({ ...p, pmeDecomp: v }))}
               label="GMX_GPU_PME_DECOMPOSITION=1"
               description="Distributes 3D PME FFT across multiple GPUs with cuFFTMp"
               accent="green"
             />
-            <AppleSwitch
+            <ToggleSwitch
               checked={legacyVars}
               onChange={setLegacyVars}
               label="Include GROMACS 2020–2021 Legacy Vars"
@@ -431,7 +431,7 @@ export const NvidiaGpuStudio: React.FC = () => {
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="apple-card p-4">
+            <div className="surface-card p-4">
               <div className="text-[12px] font-semibold text-[#248a3d] dark:text-[#30d158]">
                 MPS vs. MIG Quick Rule
               </div>
@@ -439,7 +439,7 @@ export const NvidiaGpuStudio: React.FC = () => {
                 Use <strong>CUDA MPS</strong> on any NVIDIA GPU for flexible oversubscription (2–8 replicas/GPU). Use <strong>MIG</strong> on A100/H100 when you need strict hardware SM & VRAM isolation.
               </p>
             </div>
-            <div className="apple-card p-4">
+            <div className="surface-card p-4">
               <div className="text-[12px] font-semibold text-[var(--accent-blue)]">
                 Required .mdp Pairing
               </div>

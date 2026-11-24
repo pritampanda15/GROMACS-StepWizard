@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, useSpring, useTransform } from 'framer-motion';
 import { Check, Copy, Download, Terminal } from 'lucide-react';
 
-export const APPLE_SPRING = {
+export const UI_SPRING = {
   type: 'spring' as const,
   stiffness: 380,
   damping: 32,
@@ -55,7 +55,7 @@ export function SegmentedControl<T extends string>({
             {active && (
               <motion.span
                 layoutId={layoutId}
-                transition={APPLE_SPRING}
+                transition={UI_SPRING}
                 className="absolute inset-0 rounded-full bg-[var(--bg-solid)] shadow-[0_2px_8px_rgba(0,0,0,0.09)] border border-[var(--border-hairline)]"
               />
             )}
@@ -70,7 +70,7 @@ export function SegmentedControl<T extends string>({
   );
 }
 
-export function AppleSwitch({
+export function ToggleSwitch({
   checked,
   onChange,
   label,
@@ -109,7 +109,7 @@ export function AppleSwitch({
       >
         <motion.div
           layout
-          transition={APPLE_SPRING}
+          transition={UI_SPRING}
           className="w-[22px] h-[22px] rounded-full bg-white shadow-[0_2px_5px_rgba(0,0,0,0.22)]"
           style={{ marginLeft: checked ? 'auto' : 0 }}
         />

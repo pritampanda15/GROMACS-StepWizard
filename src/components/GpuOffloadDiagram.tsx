@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Cpu, Zap, ArrowLeftRight, Layers } from 'lucide-react';
-import { APPLE_SPRING } from './ApplePrimitives';
+import { UI_SPRING } from './UiPrimitives';
 
 export interface GpuPipelineState {
   nb: 'gpu' | 'cpu';
@@ -41,7 +41,7 @@ export const GpuOffloadDiagram: React.FC<{
     (state.pmeDecomp && state.gpus > 1 ? 1.1 : 0);
 
   return (
-    <div className="apple-card p-5 sm:p-6 overflow-hidden relative">
+    <div className="surface-card p-5 sm:p-6 overflow-hidden relative">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <div className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)]">
@@ -94,7 +94,7 @@ export const GpuOffloadDiagram: React.FC<{
                 layoutId={`gpu-task-${task.key}`}
                 key={task.key}
                 type="button"
-                transition={APPLE_SPRING}
+                transition={UI_SPRING}
                 onClick={() => onToggleTask?.(task.key)}
                 className="w-full text-left px-3.5 py-2.5 rounded-2xl bg-[var(--bg-solid)] border border-[var(--border-hairline)] hover:border-[var(--accent-blue)] shadow-xs transition-colors cursor-pointer"
               >
@@ -211,7 +211,7 @@ export const GpuOffloadDiagram: React.FC<{
                 layoutId={`gpu-task-${task.key}`}
                 key={task.key}
                 type="button"
-                transition={APPLE_SPRING}
+                transition={UI_SPRING}
                 onClick={() => onToggleTask?.(task.key)}
                 className="w-full text-left px-3.5 py-2.5 rounded-2xl bg-[var(--bg-solid)] border border-[#30d158]/30 hover:border-[#30d158] shadow-xs transition-colors cursor-pointer"
               >

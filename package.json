@@ -1,17 +1,18 @@
 {
   "name": "gromacs-stepwizard",
   "private": true,
-  "version": "2.0.0",
+  "version": "1.0.0",
   "type": "module",
-  "description": "Apple-crafted GROMACS StepWizard, MDP Generator, CLI Builder, NVIDIA GPU Studio & Molecular Dynamics Script Vault",
+  "description": "Web studio for GROMACS step calculations, MDP generation & linting, CLI building, NVIDIA GPU acceleration, and Molecular Dynamics HPC workflows.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --noEmit",
     "preview": "vite preview"
   },
   "dependencies": {
     "framer-motion": "^12.4.7",
-    "jszip": "^3.10.2",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

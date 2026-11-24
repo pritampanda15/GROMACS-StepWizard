@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileCode2, FolderGit2, RotateCcw, Search, Sliders } from 'lucide-react';
 import { REPO_SCRIPTS, RepoScript, ScriptCategory } from '../data/scriptsVault';
-import { APPLE_SPRING, CodeShowcase } from './ApplePrimitives';
+import { UI_SPRING, CodeShowcase } from './UiPrimitives';
 
 const CATEGORIES: ScriptCategory[] = [
   'All',
@@ -78,7 +78,7 @@ export const ScriptVaultSection: React.FC = () => {
 
   return (
     <section className="space-y-6">
-      <div className="apple-card p-5 sm:p-6 space-y-4">
+      <div className="surface-card p-5 sm:p-6 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)] inline-flex items-center gap-1.5">
@@ -99,7 +99,7 @@ export const ScriptVaultSection: React.FC = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter SLURM, MPS, PCA, MMPBSA..."
-              className="apple-input w-full pl-10 pr-4 py-2.5 text-[13px]"
+              className="ui-input w-full pl-10 pr-4 py-2.5 text-[13px]"
             />
           </div>
         </div>
@@ -121,7 +121,7 @@ export const ScriptVaultSection: React.FC = () => {
                 {active && (
                   <motion.span
                     layoutId="vault-cat-pill"
-                    transition={APPLE_SPRING}
+                    transition={UI_SPRING}
                     className="absolute inset-0 rounded-full bg-[var(--accent-blue)]"
                   />
                 )}
@@ -145,7 +145,7 @@ export const ScriptVaultSection: React.FC = () => {
                 onClick={() => setSelectedId(script.id)}
                 className={`w-full text-left p-4 rounded-[20px] border transition-all cursor-pointer ${
                   active
-                    ? 'apple-card border-[var(--accent-blue)] ring-1 ring-[var(--accent-blue)]/30'
+                    ? 'surface-card border-[var(--accent-blue)] ring-1 ring-[var(--accent-blue)]/30'
                     : 'bg-[var(--bg-elevated)] border-[var(--border-hairline)] hover:border-[var(--border-strong)]'
                 }`}
               >
@@ -185,7 +185,7 @@ export const ScriptVaultSection: React.FC = () => {
           })}
 
           {filtered.length === 0 && (
-            <div className="apple-card p-6 text-center text-[13px] text-[var(--text-secondary)]">
+            <div className="surface-card p-6 text-center text-[13px] text-[var(--text-secondary)]">
               No scripts match "{query}". Try clearing your filter.
             </div>
           )}
@@ -193,7 +193,7 @@ export const ScriptVaultSection: React.FC = () => {
 
         {/* Right Live Parameterizer + Code */}
         <div className="lg:col-span-8 space-y-4">
-          <div className="apple-card p-5">
+          <div className="surface-card p-5">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-[var(--accent-blue)]" />
@@ -220,7 +220,7 @@ export const ScriptVaultSection: React.FC = () => {
                     value={activeParams[p.key] ?? p.defaultValue}
                     onChange={(e) => updateParam(p.key, e.target.value)}
                     placeholder={p.placeholder ?? p.defaultValue}
-                    className="apple-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
                   />
                 </div>
               ))}

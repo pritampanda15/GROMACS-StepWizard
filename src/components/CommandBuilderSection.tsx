@@ -11,10 +11,10 @@ import {
   Wrench,
 } from 'lucide-react';
 import {
-  AppleSwitch,
+  ToggleSwitch,
   CodeShowcase,
   SegmentedControl,
-} from './ApplePrimitives';
+} from './UiPrimitives';
 
 type BuilderTab = 'mdrun' | 'grompp' | 'setup' | 'postprocess' | 'extend' | 'pca' | 'mmpbsa';
 
@@ -335,7 +335,7 @@ export const CommandBuilderSection: React.FC = () => {
 
   return (
     <section className="space-y-6">
-      <div className="apple-card p-5 sm:p-6">
+      <div className="surface-card p-5 sm:p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)]">
@@ -386,7 +386,7 @@ export const CommandBuilderSection: React.FC = () => {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.22 }}
-          className="lg:col-span-5 apple-card p-5 sm:p-6 space-y-4"
+          className="lg:col-span-5 surface-card p-5 sm:p-6 space-y-4"
         >
           {tab === 'mdrun' && (
             <>
@@ -398,7 +398,7 @@ export const CommandBuilderSection: React.FC = () => {
                   <input
                     value={deffnm}
                     onChange={(e) => setDeffnm(e.target.value)}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
                 <div>
@@ -412,7 +412,7 @@ export const CommandBuilderSection: React.FC = () => {
                     step={20}
                     value={nstlistOverride}
                     onChange={(e) => setNstlistOverride(Number(e.target.value))}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
               </div>
@@ -428,7 +428,7 @@ export const CommandBuilderSection: React.FC = () => {
                     max={64}
                     value={ntmpi}
                     onChange={(e) => setNtmpi(Math.max(1, Number(e.target.value)))}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
                 <div>
@@ -441,7 +441,7 @@ export const CommandBuilderSection: React.FC = () => {
                     max={64}
                     value={ntomp}
                     onChange={(e) => setNtomp(Math.max(1, Number(e.target.value)))}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
                 <div>
@@ -454,7 +454,7 @@ export const CommandBuilderSection: React.FC = () => {
                     max={16}
                     value={npme}
                     onChange={(e) => setNpme(Math.max(0, Number(e.target.value)))}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
               </div>
@@ -473,7 +473,7 @@ export const CommandBuilderSection: React.FC = () => {
                     <select
                       value={val}
                       onChange={(e) => setter(e.target.value as 'gpu' | 'cpu' | 'auto')}
-                      className="apple-input w-full px-3 py-2 text-[12.5px] mt-1 font-mono"
+                      className="ui-input w-full px-3 py-2 text-[12.5px] mt-1 font-mono"
                     >
                       <option value="gpu">gpu</option>
                       <option value="cpu">cpu</option>
@@ -491,7 +491,7 @@ export const CommandBuilderSection: React.FC = () => {
                   <select
                     value={dlb}
                     onChange={(e) => setDlb(e.target.value as 'auto' | 'yes' | 'no')}
-                    className="apple-input w-full px-3 py-2 text-[12.5px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[12.5px] mt-1 font-mono"
                   >
                     <option value="auto">auto</option>
                     <option value="yes">yes</option>
@@ -508,32 +508,32 @@ export const CommandBuilderSection: React.FC = () => {
                     max={128}
                     value={pinoffset}
                     onChange={(e) => setPinoffset(Math.max(0, Number(e.target.value)))}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
               </div>
 
               <div className="divide-y divide-[var(--border-hairline)] pt-1">
-                <AppleSwitch
+                <ToggleSwitch
                   checked={pinOn}
                   onChange={setPinOn}
                   label="Thread Pinning (-pin on)"
                   description="Locks threads to physical cores to prevent OS migration"
                   accent="green"
                 />
-                <AppleSwitch
+                <ToggleSwitch
                   checked={tunepme}
                   onChange={setTunepme}
                   label="Dynamic PME Cutoff Tuning (-tunepme)"
                   description="Balances PP and PME workload automatically at startup"
                 />
-                <AppleSwitch
+                <ToggleSwitch
                   checked={useCheckpoint}
                   onChange={setUseCheckpoint}
                   label="Resume from Checkpoint (-cpi -append)"
                   description="Continues an interrupted or extended trajectory seamlessly"
                 />
-                <AppleSwitch
+                <ToggleSwitch
                   checked={useMaxh}
                   onChange={setUseMaxh}
                   label={`SLURM Walltime Guard (-maxh ${maxh})`}
@@ -546,11 +546,11 @@ export const CommandBuilderSection: React.FC = () => {
                       step="0.2"
                       value={maxh}
                       onChange={(e) => setMaxh(Number(e.target.value))}
-                      className="apple-input w-full px-3 py-2 text-[13px] font-mono"
+                      className="ui-input w-full px-3 py-2 text-[13px] font-mono"
                     />
                   </div>
                 )}
-                <AppleSwitch
+                <ToggleSwitch
                   checked={verbose}
                   onChange={setVerbose}
                   label="Verbose Step ETA (-v)"
@@ -579,7 +579,7 @@ export const CommandBuilderSection: React.FC = () => {
                   <input
                     value={val as string}
                     onChange={(e) => (setter as (v: string) => void)(e.target.value)}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
               ))}
@@ -596,7 +596,7 @@ export const CommandBuilderSection: React.FC = () => {
                   <input
                     value={pdbIn}
                     onChange={(e) => setPdbIn(e.target.value)}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
                 <div>
@@ -606,7 +606,7 @@ export const CommandBuilderSection: React.FC = () => {
                   <select
                     value={waterModel}
                     onChange={(e) => setWaterModel(e.target.value)}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   >
                     <option value="spce">spce (SPC/E)</option>
                     <option value="tip3p">tip3p (CHARMM36 / AMBER)</option>
@@ -621,7 +621,7 @@ export const CommandBuilderSection: React.FC = () => {
                   <select
                     value={boxType}
                     onChange={(e) => setBoxType(e.target.value as 'cubic' | 'dodecahedron' | 'octahedron')}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   >
                     <option value="dodecahedron">dodecahedron (~29% fewer waters)</option>
                     <option value="cubic">cubic</option>
@@ -635,7 +635,7 @@ export const CommandBuilderSection: React.FC = () => {
                   <input
                     value={boxDist}
                     onChange={(e) => setBoxDist(e.target.value)}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
                 <div>
@@ -645,11 +645,11 @@ export const CommandBuilderSection: React.FC = () => {
                   <input
                     value={saltConc}
                     onChange={(e) => setSaltConc(e.target.value)}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
               </div>
-              <AppleSwitch
+              <ToggleSwitch
                 checked={ignh}
                 onChange={setIgnh}
                 label="Ignore Input Hydrogens (-ignh)"
@@ -667,29 +667,29 @@ export const CommandBuilderSection: React.FC = () => {
                 <input
                   value={ppPrefix}
                   onChange={(e) => setPpPrefix(e.target.value)}
-                  className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                 />
               </div>
               <div className="divide-y divide-[var(--border-hairline)]">
-                <AppleSwitch
+                <ToggleSwitch
                   checked={ppCenterPbc}
                   onChange={setPpCenterPbc}
                   label="PBC Cleanup & Center (-center -pbc mol -ur compact)"
                   description="Keeps protein whole and centered in a compact periodic box"
                 />
-                <AppleSwitch
+                <ToggleSwitch
                   checked={ppFit}
                   onChange={setPpFit}
                   label="Rotational + Translational Fit (-fit rot+trans)"
                   description="Prepares trajectory for PCA, FEL, and gmx_MMPBSA"
                 />
-                <AppleSwitch
+                <ToggleSwitch
                   checked={ppRmsd}
                   onChange={setPpRmsd}
                   label="Backbone RMSD (gmx rms -tu ns)"
                   description="Calculates structural drift over time in nanoseconds"
                 />
-                <AppleSwitch
+                <ToggleSwitch
                   checked={ppSnapshots}
                   onChange={setPpSnapshots}
                   label="Extract Separated PDB Snapshots (-sep -skip)"
@@ -706,7 +706,7 @@ export const CommandBuilderSection: React.FC = () => {
                     min={1}
                     value={ppSkip}
                     onChange={(e) => setPpSkip(Math.max(1, Number(e.target.value)))}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
               )}
@@ -722,7 +722,7 @@ export const CommandBuilderSection: React.FC = () => {
                 <input
                   value={extendPrefix}
                   onChange={(e) => setExtendPrefix(e.target.value)}
-                  className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                 />
               </div>
               <div>
@@ -739,7 +739,7 @@ export const CommandBuilderSection: React.FC = () => {
                   step={10}
                   value={extendNs}
                   onChange={(e) => setExtendNs(Number(e.target.value))}
-                  className="apple-slider w-full mt-3"
+                  className="ui-slider w-full mt-3"
                 />
               </div>
             </div>
@@ -755,7 +755,7 @@ export const CommandBuilderSection: React.FC = () => {
                   <input
                     value={pcaGroup}
                     onChange={(e) => setPcaGroup(e.target.value)}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
                 <div>
@@ -767,7 +767,7 @@ export const CommandBuilderSection: React.FC = () => {
                     min={0}
                     value={pcaStart}
                     onChange={(e) => setPcaStart(Number(e.target.value))}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
                 <div>
@@ -779,11 +779,11 @@ export const CommandBuilderSection: React.FC = () => {
                     min={1}
                     value={pcaEnd}
                     onChange={(e) => setPcaEnd(Number(e.target.value))}
-                    className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                    className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                   />
                 </div>
               </div>
-              <AppleSwitch
+              <ToggleSwitch
                 checked={pcaEntropy}
                 onChange={setPcaEntropy}
                 label="Include Quasi-Harmonic Entropy & Extreme PDB"
@@ -801,7 +801,7 @@ export const CommandBuilderSection: React.FC = () => {
                 <input
                   value={mmpbsaRec}
                   onChange={(e) => setMmpbsaRec(e.target.value)}
-                  className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                 />
               </div>
               <div>
@@ -811,7 +811,7 @@ export const CommandBuilderSection: React.FC = () => {
                 <input
                   value={mmpbsaLig}
                   onChange={(e) => setMmpbsaLig(e.target.value)}
-                  className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                 />
               </div>
               <div className="col-span-2">
@@ -821,7 +821,7 @@ export const CommandBuilderSection: React.FC = () => {
                 <input
                   value={mmpbsaTpr}
                   onChange={(e) => setMmpbsaTpr(e.target.value)}
-                  className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                 />
               </div>
               <div className="col-span-2">
@@ -831,7 +831,7 @@ export const CommandBuilderSection: React.FC = () => {
                 <input
                   value={mmpbsaXtc}
                   onChange={(e) => setMmpbsaXtc(e.target.value)}
-                  className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                 />
               </div>
             </div>
@@ -849,7 +849,7 @@ export const CommandBuilderSection: React.FC = () => {
             maxHeight="380px"
           />
 
-          <div className="apple-card p-5">
+          <div className="surface-card p-5">
             <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] mb-3">
               <Terminal className="w-3.5 h-3.5 text-[var(--accent-blue)]" /> Active Argument Breakdown
             </div>

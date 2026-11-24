@@ -1,13 +1,14 @@
+# Dependencies & builds
 node_modules/
 dist/
-.DS_Store
-*.local
 .vite/
+
+# TypeScript & local overrides
 *.tsbuildinfo
-src/components/Cinema.tsx
-public/scenes/
-bin/
-lib/
-pyvenv.cfg
-__pycache__/
-*.pyc
+*.local
+.env
+.env.*
+
+# OS artifacts
+.DS_Store
+Thumbs.db

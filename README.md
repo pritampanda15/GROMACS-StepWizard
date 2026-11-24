@@ -1,80 +1,37 @@
-# GROMACS StepWizard 2.0
+# GROMACS StepWizard
 
-[![Live App](https://img.shields.io/badge/Launch_Live_App-pritampanda15.github.io-0071E3?style=flat-square&logo=githubpages&logoColor=white)](https://pritampanda15.github.io/GROMACS-StepWizard/)
-[![React](https://img.shields.io/badge/React-19-0071E3?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Framer Motion](https://img.shields.io/badge/Framer_Motion-Spring_UI-0055FF?style=flat-square&logo=framer&logoColor=white)](https://www.framer.com/motion/)
-[![NVIDIA CUDA](https://img.shields.io/badge/NVIDIA-CUDA_%2F_NGC_%2F_cuFFTMp-76B900?style=flat-square&logo=nvidia&logoColor=white)](https://catalog.ngc.nvidia.com/orgs/hpc/containers/gromacs)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square)](LICENSE.txt)
+[![Live App](https://img.shields.io/badge/Live_App-pritampanda15.github.io-0071E3?style=flat-square&logo=githubpages&logoColor=white)](https://pritampanda15.github.io/GROMACS-StepWizard/)
+[![CI](https://img.shields.io/github/actions/workflow/status/pritampanda15/GROMACS-StepWizard/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/pritampanda15/GROMACS-StepWizard/actions/workflows/ci.yml)
+[![Deploy](https://img.shields.io/github/actions/workflow/status/pritampanda15/GROMACS-StepWizard/deploy.yml?branch=main&label=Pages&style=flat-square)](https://github.com/pritampanda15/GROMACS-StepWizard/actions/workflows/deploy.yml)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square)](LICENSE)
 
-**Live App:** https://pritampanda15.github.io/GROMACS-StepWizard/
+**Live Application:** [https://pritampanda15.github.io/GROMACS-StepWizard/](https://pritampanda15.github.io/GROMACS-StepWizard/)
 
-**Molecular dynamics, precision engineered.**
+**GROMACS StepWizard** is a client-side web studio for **GROMACS** molecular dynamics workflows. Calculate exact `nsteps`, export complete `.mdp` and shell script simulation kits (`.zip`), build GROMACS & NVIDIA GPU-accelerated CLI commands, estimate HPC walltime and `.xtc` storage, lint `.mdp` files, and inspect `.xvg` and `md.log` outputs — all directly in the browser with no backend required.
 
-**GROMACS StepWizard 2.0** is an Apple-crafted, pure client-side frontend studio for **GROMACS** molecular dynamics researchers. Calculate exact `nsteps`, generate OPLS-AA & CHARMM36 `.mdp` files, assemble official GROMACS & NVIDIA GPU-accelerated CLI commands, customize production HPC/SLURM and analysis scripts from [`Molecular-Dynamics`](https://github.com/pritampanda15/Molecular-Dynamics), and preview real MD trajectory movies directly in the browser — with zero backend required.
-
-![GROMACS StepWizard 2.0 — Hero & MD Trajectory Showcase](images/stepwizard_v2_hero.png)
-
-> **Video Walkthrough (v1):** [YouTube Tutorial](https://www.youtube.com/watch?v=RWzqH28UeLE)
+![GROMACS StepWizard Interface](docs/screenshot.png)
 
 ---
 
-## Core Workspaces & Capabilities
+## Features
 
-### 1. Real MD Trajectory Movie Player (Hero Stage)
-- Smooth Apple-styled HTML5 video showcase featuring pre-rendered GROMACS MD trajectory clips:
-  - **Membrane · Lipid Bilayer** — Transmembrane protein embedded in a lipid bilayer (`CHARMM36` semi-isotropic NPT, 310.15 K).
-  - **Protein · Ligand Complex** — Explicit-solvent protein–ligand binding dynamics.
-- **Load Local Video**: Preview your own `.mp4` / `.webm` MD movies exported from PyMOL, VMD, ChimeraX, or GROMACS with playback speed controls (`0.5×`–`2×`), timeline scrubbing, and fullscreen mode.
-
-### 2. Step & MDP Wizard + Full `.zip` Kit & Walltime Planner
-- Instant `nsteps` calculator across **picoseconds (`ps`)**, **nanoseconds (`ns`)**, and **microseconds (`µs`)** with selectable integration timestep (`1 fs`, `2 fs`, `4 fs HMR`), temperature, thermostat (`V-rescale`, `Nose-Hoover`, `berendsen`), barostat (`Parrinello-Rahman`, `C-rescale`), `constraints`, `nstlist`, and `.xtc` save cadence.
-- **One-Click Full MD Kit (`.zip`)**: Exports `ions.mdp`, `minim.mdp`, `nvt.mdp`, `npt.mdp`, `production.mdp`, `run_local_gpu.sh`, `slurm_gpu_md.sh`, and `README_KIT.txt` — all synchronized to your exact protocol.
-- **HPC Walltime, SLURM `-maxh` & Storage Estimator**: Select hardware (`H100`, `A100`, `RTX 4090`, `4× A100`, `64c CPU`), system atom count (`10k–1M`), and SLURM queue limit to estimate `ns/day`, wall-clock hours, chained segments, and `.xtc` disk size in GB.
-- **7 Curated `.mdp` Presets** (OPLS-AA, NVIDIA GPU-Resident, CHARMM36 Asymmetric Lipid Bilayer `step7_production.mdp`, CHARMM36 Protein–Ligand, NVT, NPT, Energy Minimization).
-
-### 3. Client-Side `.mdp` Sanity Linter & `.xvg` / `md.log` Analyzer (`Inspector`)
-- **`.mdp` Linter & One-Click Auto-Fix**: Audits `.mdp` files for legacy `group` cutoffs, Berendsen barostat/thermostat in production, `all-bonds` blocking `-update gpu`, `.trr` disk bloat, low GPU `nstlist`, and missing `DispCorr` — with one-click fixes and clean `.mdp` export.
-- **`.xvg` & `md.log` Analyzer**: Drag & drop `rmsd.xvg`, `gyrate.xvg`, or `md.log` to render interactive SVG plots with hover statistics (`Mean ± SD`, `Min`, `Max`) and extract GPU `ns/day` throughput and offload tasks.
-
-### 4. macOS `⌘K` Spotlight Command Palette
-- Press `⌘K` (or `Ctrl+K`) anywhere to jump directly to any MDP preset, CLI flag, NVIDIA GPU env var, `Molecular-Dynamics` script, or tool, with one-click command copy.
-
-### 5. Visual GROMACS CLI Builder
-- Toggle between **`gmx` (Thread-MPI)** and **`gmx_mpi` (HPC MPI)** and interactively assemble validated commands across the full MD lifecycle:
-  - **`mdrun`**: `-ntmpi`, `-ntomp`, `-npme`, `-nb`, `-pme`, `-bonded`, `-update`, `-nstlist`, `-pin`, `-pinoffset`, `-dlb`, `-tunepme`, `-maxh`, `-cpi`, `-append`
-  - **`grompp`**: `-f`, `-c`, `-r`, `-t`, `-p`, `-n`, `-o`, `-maxwarn`
-  - **System Setup**: `pdb2gmx`, `editconf`, `solvate`, `genion`
-  - **Post-Processing**: `trjconv` (`-center -pbc mol -ur compact`, `-fit rot+trans`, `-sep -skip`), `rms` (`-tu ns`)
-  - **Extend Run**: `convert-tpr -extend` + checkpoint restart
-  - **PCA & Free Energy Landscape**: `covar`, `anaeig` (`-2d`, `-extr`, `-entropy`), `sham`, `xpm2ps`
-  - **Binding Free Energy**: `gmx_MMPBSA` & `gmx_MMPBSA_ana`
-
-### 4. NVIDIA GPU & HPC Acceleration Studio
-- **Interactive Host CPU ↔ NVIDIA GPU Offload Diagram**: Click any task tile (`Non-Bonded`, `PME Long-Range`, `Bonded Forces`, `Update & LINCS`) to animate task placement between CPU and GPU and observe PCIe vs. GPU-resident loop behavior.
-- Ready-to-run launch generators built from official **NVIDIA GROMACS Docs** and `Molecular-Dynamics/hpc/nvidia-gpu/`:
-  - **Single-GPU Resident** (`-nb gpu -pme gpu -bonded gpu -update gpu`, `GMX_CUDA_GRAPH=1`, `-nstlist 100`)
-  - **Multi-GPU Direct Comm** (`GMX_ENABLE_DIRECT_GPU_COMM=1`, `-npme 1`, optional GROMACS 2020–2021 legacy env vars)
-  - **Multi-Node `cuFFTMp` PME Decomposition** (`GMX_GPU_PME_DECOMPOSITION=1`, CMake `-DGMX_USE_CUFFTMP=ON`)
-  - **NVIDIA NGC Containers** (`docker run --gpus` & rootless `singularity`/`apptainer run --nv` with `nvcr.io/hpc/gromacs`)
-  - **NVIDIA CUDA MPS** (`nvidia-cuda-mps-control -d`, `-multidir` & independent `-pinoffset`)
-  - **A100 / H100 MIG Partitioning** (`nvidia-smi mig -cgi`, `CUDA_VISIBLE_DEVICES=MIG-<uuid>`)
-
-### 5. Molecular-Dynamics Script Vault
-- Searchable, category-filtered library of live-parameterized scripts from [`Molecular-Dynamics`](https://github.com/pritampanda15/Molecular-Dynamics) — edit cluster accounts, node counts, OpenMP threads, prefixes, or GB parameters live and export `.sh`, `.csh`, or `.in` files:
-  - `run_ngc_gromacs.sh` · `run_mps_multidir.sh` · `run_protein_md.sh` · `slurm_protein_md.sh` · `run_lipid_bilayer_slurm.sh` · `slurm_charmm_gui.csh` · `batch_postprocess.sh` · `run_pca_fel_windows.sh` · `mmpbsa.in` · `protein_ligand_cgenff.sh`
-
-### 6. Unified Docs & Flags Reference
-- Instant Spotlight search across 40+ GROMACS official CLI flags, NVIDIA GPU environment variables/container/MPS/MIG commands, and `.mdp` options, with one-click copyable examples and source badges.
+| Workspace | Capabilities |
+| :--- | :--- |
+| **Step & MDP Wizard** | Convert simulation length (`ps`, `ns`, `µs`) to exact `nsteps` across `1 fs`, `2 fs`, and `4 fs HMR` timesteps; 7 curated `.mdp` presets (OPLS-AA, NVIDIA GPU-Resident, CHARMM36 Lipid Bilayer, CHARMM36 Protein–Ligand, NVT, NPT, Energy Minimization); one-click **Full MD Kit (`.zip`)** export (`ions.mdp`, `minim.mdp`, `nvt.mdp`, `npt.mdp`, `production.mdp`, `run_local_gpu.sh`, `slurm_gpu_md.sh`, `README_KIT.txt`); and an **HPC Walltime, SLURM `-maxh` & Storage Estimator**. |
+| **CLI Builder** | Visual `gmx` / `gmx_mpi` command assembler covering `mdrun`, `grompp`, system setup (`pdb2gmx`, `editconf`, `solvate`, `genion`), trajectory post-processing (`trjconv`, `rms`), run extension (`convert-tpr`), PCA/FEL (`covar`, `anaeig`, `sham`, `xpm2ps`), and `gmx_MMPBSA`, with live per-flag explanations. |
+| **NVIDIA GPU Studio** | Interactive **Host CPU ↔ NVIDIA GPU** task offload visualizer (`-nb`, `-pme`, `-bonded`, `-update`) and launch generators for Single-GPU Resident (`GMX_CUDA_GRAPH=1`), Multi-GPU Direct Comm (`GMX_ENABLE_DIRECT_GPU_COMM=1`), Multi-Node `cuFFTMp` PME Decomposition (`GMX_GPU_PME_DECOMPOSITION=1`), NVIDIA NGC Containers (Docker & Singularity/Apptainer), CUDA MPS (`-multidir` & `-pinoffset`), and A100/H100 MIG partitioning. |
+| **Script Vault** | Live-parameterized bash, C-shell, and `gmx_MMPBSA` scripts curated from [`Molecular-Dynamics`](https://github.com/pritampanda15/Molecular-Dynamics) (`run_ngc_gromacs.sh`, `run_mps_multidir.sh`, `run_protein_md.sh`, `slurm_protein_md.sh`, `run_lipid_bilayer_slurm.sh`, `slurm_charmm_gui.csh`, `batch_postprocess.sh`, `run_pca_fel_windows.sh`, `mmpbsa.in`, and CHARMM36/CGenFF protein–ligand setup). |
+| **Inspector** | Client-side **`.mdp` Sanity Linter** (10 ensemble & GPU rules with one-click auto-fix and clean `.mdp` export) plus an interactive **`.xvg` Plotter & `md.log` Benchmark Parser** (`ns/day`, detected GPU, offload mapping, and summary statistics). |
+| **Docs & Flags + `⌘K` Search** | Instant `⌘K` / `Ctrl+K` command palette and searchable reference across GROMACS official CLI arguments, NVIDIA GPU environment variables, and `.mdp` options. |
 
 ---
 
 ## Quick Start
 
 ### Prerequisites
-- **Node.js** 18+ (tested with Node 22) and `npm`
+- **Node.js** 18+ (22 recommended) and `npm`
 
-### Run Locally
+### Local Development
 ```bash
 git clone https://github.com/pritampanda15/GROMACS-StepWizard.git
 cd GROMACS-StepWizard
@@ -83,75 +40,77 @@ npm run dev
 ```
 Open `http://localhost:5173/` in your browser.
 
-### Build & Auto-Deploy
+### Typecheck & Production Build
 ```bash
+npm run typecheck
 npm run build
 npm run preview
 ```
-Pushes to `main` automatically build and deploy to **GitHub Pages** via [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) (enable **Settings → Pages → Source: GitHub Actions** once in your repo settings to serve at `https://pritampanda15.github.io/GROMACS-StepWizard/`).
+
+Pushes to `main` are checked by [`.github/workflows/ci.yml`](.github/workflows/ci.yml) and automatically deployed to GitHub Pages via [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
 
 ---
 
-## Project Structure
+## Repository Structure
 
 ```text
 GROMACS-StepWizard/
-├── index.html                        # Vite entry HTML
-├── package.json                      # React 19, TypeScript, Vite, Tailwind v4, Framer Motion
-├── vite.config.ts                    # Vite build config
-├── public/
-│   └── media/
-│       ├── membrane_bilayer_md.mp4   # Pre-rendered membrane protein + lipid bilayer MD clip
-│       └── protein_ligand_md.mp4     # Pre-rendered protein-ligand MD clip
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
+│   └── workflows/
+│       ├── ci.yml                      # TypeScript & Vite build verification
+│       └── deploy.yml                  # GitHub Pages deployment
+├── docs/
+│   └── screenshot.png                  # Application preview
 ├── src/
-│   ├── App.tsx                       # Adaptive Light/Dark shell, nav, hero & 8-stage MD pipeline
-│   ├── index.css                     # Apple design tokens & frosted glass styles
+│   ├── App.tsx                         # Shell, navigation, hero & 8-stage MD pipeline
+│   ├── main.tsx                        # React entry point
+│   ├── index.css                       # Light/Dark theme tokens & styling
 │   ├── components/
-│   │   ├── ApplePrimitives.tsx       # SegmentedControl, AppleSwitch, AnimatedNumber, CodeShowcase
-│   │   ├── MdMoviePlayer.tsx         # Apple-styled HTML5 MD trajectory movie player
-│   │   ├── StepWizardSection.tsx     # Step calculator & MDP generator
-│   │   ├── CommandBuilderSection.tsx # Visual GROMACS CLI assembler
-│   │   ├── GpuOffloadDiagram.tsx     # Interactive CPU <-> NVIDIA GPU offload motion graphic
-│   │   ├── NvidiaGpuStudio.tsx       # Single/Multi-GPU, cuFFTMp, NGC, MPS & MIG studio
-│   │   ├── ScriptVaultSection.tsx    # Live-parameterized Molecular-Dynamics script vault
-│   │   └── ReferenceSection.tsx      # Spotlight-searchable CLI, GPU & MDP reference
-│   └── data/
-│       ├── mdpPresets.ts             # 7 curated MDP templates & parameter docs
-│       ├── cliReference.ts           # GROMACS + NVIDIA GPU CLI & env var catalog
-│       └── scriptsVault.ts           # Parameterized scripts from Molecular-Dynamics
-├── images/
-│   └── stepwizard_v2_hero.png        # v2 frontend showcase screenshot
-├── app.py                            # Legacy Flask app (preserved)
-└── mdp-generator-app.py              # Legacy Streamlit app (preserved)
+│   │   ├── UiPrimitives.tsx            # SegmentedControl, ToggleSwitch, AnimatedNumber, CodeShowcase
+│   │   ├── StepWizardSection.tsx       # Step calculator, MDP generator, ZIP export & walltime planner
+│   │   ├── CommandBuilderSection.tsx   # Visual GROMACS CLI builder
+│   │   ├── GpuOffloadDiagram.tsx       # Interactive CPU <-> NVIDIA GPU offload diagram
+│   │   ├── NvidiaGpuStudio.tsx         # Single/Multi-GPU, cuFFTMp, NGC, MPS & MIG studio
+│   │   ├── ScriptVaultSection.tsx      # Parameterized Molecular-Dynamics script library
+│   │   ├── AnalyzerSection.tsx         # Client-side .mdp linter & .xvg / md.log analyzer
+│   │   ├── ReferenceSection.tsx        # Searchable CLI, NVIDIA GPU & MDP documentation
+│   │   └── SpotlightPalette.tsx        # Cmd+K / Ctrl+K quick search palette
+│   ├── data/
+│   │   ├── mdpPresets.ts               # Curated MDP templates & parameter docs
+│   │   ├── cliReference.ts             # GROMACS & NVIDIA GPU CLI flag catalog
+│   │   └── scriptsVault.ts             # Parameterized HPC & analysis scripts
+│   └── utils/
+│       └── simulationKit.ts            # Client-side .zip simulation bundle generator
+├── index.html
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── CONTRIBUTING.md
+└── LICENSE
 ```
 
 ---
 
 ## Tech Stack
 
-- **Framework**: React 19 + TypeScript + Vite 6
-- **Styling**: Tailwind CSS v4 + Apple HIG Light/Dark translucent design tokens
-- **Motion Graphics**: Framer Motion spring physics + interactive SVG/CSS GPU pipeline animations
-- **Icons**: Lucide React
+- **UI & Build**: React 19, TypeScript 5.7, Vite 6, Tailwind CSS v4
+- **Animation & Icons**: Framer Motion, Lucide React
+- **Bundle Export**: JSZip
 
 ---
 
-## Legacy Python / Streamlit Versions
+## Contributing
 
-The original v1 Flask ([`app.py`](app.py)) and Streamlit ([`mdp-generator-app.py`](mdp-generator-app.py)) apps remain preserved in this repository:
-- Legacy Streamlit Deployment: https://gromacs-stepwizard-mlxl5hetcpbozrlc94gtyu.streamlit.app/
-- Run legacy Flask locally: `pip install -r requirements.txt && python app.py`
+Contributions are welcome! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local setup and pull request guidelines.
 
 ---
 
-## Author
+## Author & License
 
-**Pritam Kumar Panda**  
-Stanford University  
-[GitHub](https://github.com/pritampanda15) | [LinkedIn](https://www.linkedin.com/in/pritam-kumar-panda/)
+**Pritam Kumar Panda** · Stanford University  
+[GitHub](https://github.com/pritampanda15) · [LinkedIn](https://www.linkedin.com/in/pritam-kumar-panda/) · [Molecular-Dynamics Repository](https://github.com/pritampanda15/Molecular-Dynamics)
 
----
-
-## License
-
-This project is licensed under the **Apache License 2.0**. See [`LICENSE.txt`](LICENSE.txt) for details.
+Licensed under the **Apache License 2.0** — see [`LICENSE`](LICENSE) for details.

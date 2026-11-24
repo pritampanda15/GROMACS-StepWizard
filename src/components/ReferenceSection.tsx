@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Check, Copy, Search, Sparkles, Terminal } from 'lucide-react';
 import { CLI_FLAGS_REFERENCE, CliCategory } from '../data/cliReference';
 import { MDP_PARAM_DOCS } from '../data/mdpPresets';
-import { SegmentedControl } from './ApplePrimitives';
+import { SegmentedControl } from './UiPrimitives';
 
 type RefTab = 'cli' | 'mdp';
 
@@ -64,7 +64,7 @@ export const ReferenceSection: React.FC = () => {
 
   return (
     <section className="space-y-6">
-      <div className="apple-card p-5 sm:p-6 space-y-4">
+      <div className="surface-card p-5 sm:p-6 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)]">
@@ -108,7 +108,7 @@ export const ReferenceSection: React.FC = () => {
                 ? 'Search flags like -update gpu, GMX_ENABLE_DIRECT_GPU_COMM, cuFFTMp, trjconv, gmx_MMPBSA...'
                 : 'Search MDP options like nstlist, constraints, C-rescale, semiisotropic...'
             }
-            className="apple-input w-full pl-11 pr-4 py-3 text-[14px]"
+            className="ui-input w-full pl-11 pr-4 py-3 text-[14px]"
           />
         </div>
 
@@ -146,7 +146,7 @@ export const ReferenceSection: React.FC = () => {
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="apple-card p-5 flex flex-col justify-between gap-3"
+                className="surface-card p-5 flex flex-col justify-between gap-3"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
@@ -211,7 +211,7 @@ export const ReferenceSection: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredMdp.map((doc) => (
-            <div key={doc.param} className="apple-card p-5 space-y-2.5">
+            <div key={doc.param} className="surface-card p-5 space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="font-mono text-[15px] font-semibold text-[var(--accent-blue)]">
                   {doc.param}

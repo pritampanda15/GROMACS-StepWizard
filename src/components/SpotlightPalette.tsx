@@ -158,7 +158,7 @@ export const SpotlightPalette: React.FC<{
             onKeyDown={handleKeyDown}
             role="dialog"
             aria-label="Spotlight Command Palette"
-            className="w-full max-w-2xl rounded-[24px] overflow-hidden apple-glass shadow-[0_32px_90px_rgba(0,0,0,0.45)] border border-[var(--border-strong)]"
+            className="w-full max-w-2xl rounded-[24px] overflow-hidden glass-surface shadow-[0_32px_90px_rgba(0,0,0,0.45)] border border-[var(--border-strong)]"
           >
             <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border-hairline)]">
               <Search className="w-5 h-5 text-[var(--accent-blue)] shrink-0" />

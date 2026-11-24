@@ -19,11 +19,11 @@ import {
   generateMdpText,
 } from '../data/mdpPresets';
 import {
-  APPLE_SPRING,
+  UI_SPRING,
   AnimatedNumber,
   CodeShowcase,
   SegmentedControl,
-} from './ApplePrimitives';
+} from './UiPrimitives';
 import { downloadSimulationKitZip } from '../utils/simulationKit';
 
 type TimeUnit = 'ps' | 'ns' | 'us';
@@ -205,7 +205,7 @@ export const StepWizardSection: React.FC<{
   return (
     <section className="space-y-6">
       {/* Preset Strip + One-Click ZIP Bundle Export */}
-      <div className="apple-card p-5 sm:p-6">
+      <div className="surface-card p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)]">
@@ -265,7 +265,7 @@ export const StepWizardSection: React.FC<{
                   {active && (
                     <motion.span
                       layoutId="active-preset-dot"
-                      transition={APPLE_SPRING}
+                      transition={UI_SPRING}
                       className="w-2 h-2 rounded-full bg-[var(--accent-blue)]"
                     />
                   )}
@@ -284,7 +284,7 @@ export const StepWizardSection: React.FC<{
 
       {/* Animated KPI Telemetry Bento */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="apple-card p-5">
+        <div className="surface-card p-5">
           <div className="flex items-center justify-between text-[var(--text-secondary)] text-[12px] font-medium">
             <span>Calculated nsteps</span>
             <Gauge className="w-4 h-4 text-[var(--accent-blue)]" />
@@ -297,7 +297,7 @@ export const StepWizardSection: React.FC<{
           </div>
         </div>
 
-        <div className="apple-card p-5">
+        <div className="surface-card p-5">
           <div className="flex items-center justify-between text-[var(--text-secondary)] text-[12px] font-medium">
             <span>Simulation Duration</span>
             <Clock className="w-4 h-4 text-[#5856d6]" />
@@ -319,7 +319,7 @@ export const StepWizardSection: React.FC<{
           </div>
         </div>
 
-        <div className="apple-card p-5">
+        <div className="surface-card p-5">
           <div className="flex items-center justify-between text-[var(--text-secondary)] text-[12px] font-medium">
             <span>Compressed .xtc Frames</span>
             <Layers className="w-4 h-4 text-[#ff9f0a]" />
@@ -334,7 +334,7 @@ export const StepWizardSection: React.FC<{
           </div>
         </div>
 
-        <div className="apple-card p-5">
+        <div className="surface-card p-5">
           <div className="flex items-center justify-between text-[var(--text-secondary)] text-[12px] font-medium">
             <span>GPU-Resident Ready</span>
             <CheckCircle2
@@ -358,7 +358,7 @@ export const StepWizardSection: React.FC<{
 
       {/* Main Split: Controls + Live MDP Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-5 apple-card p-5 sm:p-6 space-y-6">
+        <div className="lg:col-span-5 surface-card p-5 sm:p-6 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-[var(--accent-blue)]" />
@@ -398,7 +398,7 @@ export const StepWizardSection: React.FC<{
                 max={unit === 'ps' ? 5000000 : unit === 'ns' ? 5000 : 5}
                 value={displayTime}
                 onChange={(e) => handleTimeInput(parseFloat(e.target.value))}
-                className="apple-input w-full px-4 py-3 text-[18px] font-semibold tabular-nums"
+                className="ui-input w-full px-4 py-3 text-[18px] font-semibold tabular-nums"
               />
               <span className="text-[13px] font-mono text-[var(--text-secondary)] shrink-0">
                 {unit}
@@ -417,7 +417,7 @@ export const StepWizardSection: React.FC<{
                 const rounded = valNs >= 10 ? Math.round(valNs) : Number(valNs.toFixed(2));
                 setTimeNs(Math.min(5000, Math.max(0.001, rounded)));
               }}
-              className="apple-slider w-full"
+              className="ui-slider w-full"
             />
 
             <div className="flex flex-wrap gap-1.5 pt-1">
@@ -484,7 +484,7 @@ export const StepWizardSection: React.FC<{
                   setTemperature(t);
                   onTelemetryChange?.(dt * 1000, t);
                 }}
-                className="apple-slider w-full mt-2"
+                className="ui-slider w-full mt-2"
               />
             </div>
           </div>
@@ -497,7 +497,7 @@ export const StepWizardSection: React.FC<{
               <select
                 value={tcoupl}
                 onChange={(e) => setTcoupl(e.target.value)}
-                className="apple-input w-full px-3 py-2 text-[13px]"
+                className="ui-input w-full px-3 py-2 text-[13px]"
               >
                 <option value="V-rescale">V-rescale (Recommended)</option>
                 <option value="Nose-Hoover">Nose-Hoover (Membranes)</option>
@@ -513,7 +513,7 @@ export const StepWizardSection: React.FC<{
               <select
                 value={pcoupl}
                 onChange={(e) => setPcoupl(e.target.value)}
-                className="apple-input w-full px-3 py-2 text-[13px]"
+                className="ui-input w-full px-3 py-2 text-[13px]"
               >
                 <option value="Parrinello-Rahman">Parrinello-Rahman</option>
                 <option value="C-rescale">C-rescale (GROMACS 2021+)</option>
@@ -529,7 +529,7 @@ export const StepWizardSection: React.FC<{
               <select
                 value={constraints}
                 onChange={(e) => setConstraints(e.target.value)}
-                className="apple-input w-full px-3 py-2 text-[13px]"
+                className="ui-input w-full px-3 py-2 text-[13px]"
               >
                 <option value="h-bonds">h-bonds (GPU-Resident)</option>
                 <option value="all-bonds">all-bonds (CPU Update)</option>
@@ -544,7 +544,7 @@ export const StepWizardSection: React.FC<{
               <select
                 value={nstlist}
                 onChange={(e) => setNstlist(Number(e.target.value))}
-                className="apple-input w-full px-3 py-2 text-[13px]"
+                className="ui-input w-full px-3 py-2 text-[13px]"
               >
                 <option value={10}>10 (Classic CPU)</option>
                 <option value={20}>20 (Standard Verlet)</option>
@@ -572,7 +572,7 @@ export const StepWizardSection: React.FC<{
                 step={1}
                 value={saveIntervalPs}
                 onChange={(e) => setSaveIntervalPs(Number(e.target.value))}
-                className="apple-slider w-full"
+                className="ui-slider w-full"
               />
             </div>
           )}
@@ -600,7 +600,7 @@ export const StepWizardSection: React.FC<{
       </div>
 
       {/* HPC Walltime, SLURM -maxh & Storage Estimator */}
-      <div className="apple-card p-5 sm:p-6 space-y-5">
+      <div className="surface-card p-5 sm:p-6 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#248a3d] dark:text-[#30d158] inline-flex items-center gap-1.5">
@@ -625,7 +625,7 @@ export const StepWizardSection: React.FC<{
                 <select
                   value={hardwareId}
                   onChange={(e) => setHardwareId(e.target.value)}
-                  className="apple-input w-full px-3 py-2 text-[13px] mt-1"
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1"
                 >
                   {HARDWARE_PROFILES.map((h) => (
                     <option key={h.id} value={h.id}>
@@ -641,7 +641,7 @@ export const StepWizardSection: React.FC<{
                 <select
                   value={queueHours}
                   onChange={(e) => setQueueHours(Number(e.target.value))}
-                  className="apple-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                 >
                   <option value={12}>12 hours (-maxh 11.8)</option>
                   <option value={24}>24 hours (-maxh 23.5)</option>
@@ -667,7 +667,7 @@ export const StepWizardSection: React.FC<{
                 step={5000}
                 value={atoms}
                 onChange={(e) => setAtoms(Number(e.target.value))}
-                className="apple-slider w-full"
+                className="ui-slider w-full"
               />
               <div className="flex flex-wrap gap-1.5">
                 {SYSTEM_SIZES.map((s) => (
