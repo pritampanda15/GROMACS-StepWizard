@@ -3,10 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Atom,
   BookOpen,
-  Check,
   ChevronRight,
   Command,
-  Copy,
   FileSearch,
   FolderGit2,
   Gauge,
@@ -16,6 +14,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { UI_SPRING, SegmentedControl } from './components/UiPrimitives';
+import { MdMoviePlayer } from './components/MdMoviePlayer';
 import { StepWizardSection } from './components/StepWizardSection';
 import { CommandBuilderSection } from './components/CommandBuilderSection';
 import { NvidiaGpuStudio } from './components/NvidiaGpuStudio';
@@ -37,9 +36,6 @@ const PIPELINE_STAGES: { label: string; cmd: string; target: WorkspaceTab }[] = 
   { label: 'ΔG_bind', cmd: 'gmx_MMPBSA', target: 'scripts' },
 ];
 
-const QUICK_GPU_CMD =
-  'gmx mdrun -v -deffnm md_0_1 -nb gpu -pme gpu -bonded gpu -update gpu -nstlist 100 -pin on';
-
 export default function App() {
   const [dark, setDark] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -50,7 +46,6 @@ export default function App() {
   const [heroTempK, setHeroTempK] = useState<number>(300);
   const [spotlightOpen, setSpotlightOpen] = useState<boolean>(false);
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
-  const [copiedHeroCmd, setCopiedHeroCmd] = useState<boolean>(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
@@ -75,24 +70,6 @@ export default function App() {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
-
-  const copyQuickCmd = async () => {
-    try {
-      await navigator.clipboard.writeText(QUICK_GPU_CMD);
-    } catch {
-      // ignore clipboard errors
-    }
-    setCopiedHeroCmd(true);
-    setTimeout(() => setCopiedHeroCmd(false), 1600);
-  };
-
-  const dtPs = heroDtFs / 1000;
-  const quickConversions = [
-    { label: '1 ns', steps: Math.round(1000 / dtPs) },
-    { label: '10 ns', steps: Math.round(10000 / dtPs) },
-    { label: '100 ns', steps: Math.round(100000 / dtPs) },
-    { label: '1 µs', steps: Math.round(1000000 / dtPs) },
-  ];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -187,7 +164,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Top Overview Section */}
       <div className="relative overflow-hidden">
         <div
           className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[440px] rounded-full blur-3xl opacity-45"
@@ -199,12 +176,12 @@ export default function App() {
         />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-8 sm:pt-12 sm:pb-10 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-7 space-y-5"
+              className="lg:col-span-6 space-y-5"
             >
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-surface text-[12px] font-medium text-[var(--text-secondary)]">
                 <span className="w-2 h-2 rounded-full bg-[#30d158]" />
@@ -218,7 +195,7 @@ export default function App() {
                 </span>
               </h1>
 
-              <p className="text-[16px] sm:text-[17px] leading-[1.58] text-[var(--text-secondary)] max-w-2xl">
+              <p className="text-[16px] sm:text-[17px] leading-[1.58] text-[var(--text-secondary)] max-w-xl">
                 Calculate exact <code className="font-mono text-[14.5px] text-[var(--text-primary)]">nsteps</code>, export complete <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.zip</code> simulation kits, assemble NVIDIA GPU-resident <code className="font-mono text-[14.5px] text-[var(--text-primary)]">gmx mdrun</code> flags, lint <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.mdp</code> files, and inspect <code className="font-mono text-[14.5px] text-[var(--text-primary)]">.xvg</code> / <code className="font-mono text-[14.5px] text-[var(--text-primary)]">md.log</code> outputs directly in your browser.
               </p>
 
@@ -250,69 +227,13 @@ export default function App() {
               </div>
             </motion.div>
 
-            {/* Quick Step Reference & GPU Launch Card */}
             <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
-              className="lg:col-span-5 surface-card p-5 sm:p-6 space-y-4"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
+              className="lg:col-span-6"
             >
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)]">
-                    Live Step Reference
-                  </div>
-                  <div className="text-[15px] font-semibold text-[var(--text-primary)]">
-                    dt = {heroDtFs} fs ({dtPs} ps) · {heroTempK} K
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-medium bg-[#30d158]/14 text-[#248a3d] dark:text-[#30d158]">
-                  Verlet + h-bonds
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                {quickConversions.map((row) => (
-                  <div
-                    key={row.label}
-                    className="p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-hairline)]"
-                  >
-                    <div className="text-[11.5px] font-medium text-[var(--text-secondary)]">
-                      {row.label}
-                    </div>
-                    <div className="text-[16px] font-semibold font-mono tabular-nums text-[var(--text-primary)] mt-0.5">
-                      {row.steps.toLocaleString()}
-                    </div>
-                    <div className="text-[10.5px] text-[var(--text-tertiary)]">nsteps</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="rounded-2xl bg-[var(--bg-code)] text-[#e6edf3] p-3.5 border border-white/10 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-mono text-white/55">
-                    GPU-Resident Quick Launch
-                  </span>
-                  <button
-                    type="button"
-                    onClick={copyQuickCmd}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[11px] text-white transition cursor-pointer"
-                  >
-                    {copiedHeroCmd ? (
-                      <>
-                        <Check className="w-3 h-3 text-[#30d158]" /> Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" /> Copy
-                      </>
-                    )}
-                  </button>
-                </div>
-                <code className="block text-[11.5px] font-mono text-[#a5d6ff] leading-relaxed break-all">
-                  {QUICK_GPU_CMD}
-                </code>
-              </div>
+              <MdMoviePlayer dtFs={heroDtFs} temperatureK={heroTempK} />
             </motion.div>
           </div>
 

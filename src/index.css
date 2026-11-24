@@ -148,3 +148,38 @@ input[type="range"].ui-slider::-moz-range-thumb {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(134, 134, 139, 0.55);
 }
+
+/* Video timeline scrubber */
+.md-movie-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+}
+.md-movie-scrub::-webkit-slider-runnable-track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+}
+.md-movie-scrub::-moz-range-track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+}
+.md-movie-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -4px;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+}
+.md-movie-scrub::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: 9999px;
+  background: #ffffff;
+}

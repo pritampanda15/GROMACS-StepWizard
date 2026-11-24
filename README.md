@@ -64,12 +64,15 @@ GROMACS-StepWizard/
 │       └── deploy.yml                  # GitHub Pages deployment
 ├── docs/
 │   └── screenshot.png                  # Application preview
+├── public/
+│   └── media/                          # Bundled MD trajectory clips
 ├── src/
-│   ├── App.tsx                         # Shell, navigation, hero & 8-stage MD pipeline
+│   ├── App.tsx                         # Application shell, navigation & 8-stage MD pipeline
 │   ├── main.tsx                        # React entry point
 │   ├── index.css                       # Light/Dark theme tokens & styling
 │   ├── components/
 │   │   ├── UiPrimitives.tsx            # SegmentedControl, ToggleSwitch, AnimatedNumber, CodeShowcase
+│   │   ├── MdMoviePlayer.tsx           # Trajectory video previewer
 │   │   ├── StepWizardSection.tsx       # Step calculator, MDP generator, ZIP export & walltime planner
 │   │   ├── CommandBuilderSection.tsx   # Visual GROMACS CLI builder
 │   │   ├── GpuOffloadDiagram.tsx       # Interactive CPU <-> NVIDIA GPU offload diagram
