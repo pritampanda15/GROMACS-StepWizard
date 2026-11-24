@@ -32,6 +32,15 @@ export interface MdpConfig {
   refcoordScaling?: string;
   commGrps?: string;
   emtol?: number;
+  pull?: {
+    group1: string;
+    group2: string;
+    geometry: 'distance' | 'direction' | 'cylinder';
+    dim: string;
+    rate: number; // nm/ps (0.0 for umbrella window)
+    k: number; // kJ / (mol nm^2)
+    start: 'yes' | 'no';
+  };
 }
 
 export interface MdpPreset {
@@ -294,6 +303,94 @@ export const MDP_PRESETS: MdpPreset[] = [
       emtol: 1000.0,
     },
   },
+  {
+    id: 'steered-md-pull',
+    name: 'Steered MD Pulling (SMD)',
+    subtitle: 'Center-of-mass pulling to generate reaction coordinate windows (pull-coord1-rate > 0)',
+    badge: 'Umbrella / SMD',
+    source: 'GROMACS Pull Code & CHAPERONg Umbrella Protocol',
+    defaultTimeNs: 0.5,
+    config: {
+      title: 'Steered MD (SMD) Center-of-Mass Pulling',
+      integrator: 'md',
+      dt: 0.002,
+      temperature: 300,
+      pressure: 1.0,
+      tcoupl: 'V-rescale',
+      pcoupl: 'C-rescale',
+      pcoupltype: 'isotropic',
+      tcGrps: 'Protein Non-Protein',
+      tauT: '0.1 0.1',
+      tauP: 2.0,
+      compressibility: '4.5e-5',
+      constraints: 'h-bonds',
+      cutoffScheme: 'Verlet',
+      nstlist: 40,
+      rcoulomb: 1.0,
+      rvdw: 1.0,
+      coulombtype: 'PME',
+      nstxoutCompressed: 500,
+      nstenergy: 500,
+      nstlog: 500,
+      continuation: 'yes',
+      genVel: 'no',
+      define: '-DPOSRES_B',
+      dispCorr: 'EnerPres',
+      pull: {
+        group1: 'Chain_B',
+        group2: 'Chain_A',
+        geometry: 'distance',
+        dim: 'N N Y',
+        rate: 0.01,
+        k: 1000,
+        start: 'yes',
+      },
+    },
+  },
+  {
+    id: 'umbrella-sampling-window',
+    name: 'Umbrella Sampling Window',
+    subtitle: 'Harmonic COM restraint at fixed spacing (pull-coord1-rate = 0.0) for WHAM PMF',
+    badge: 'Umbrella / WHAM',
+    source: 'GROMACS Pull Code & CHAPERONg Umbrella Protocol',
+    defaultTimeNs: 10,
+    config: {
+      title: 'Umbrella Sampling Production Window (WHAM PMF)',
+      integrator: 'md',
+      dt: 0.002,
+      temperature: 300,
+      pressure: 1.0,
+      tcoupl: 'V-rescale',
+      pcoupl: 'Parrinello-Rahman',
+      pcoupltype: 'isotropic',
+      tcGrps: 'Protein Non-Protein',
+      tauT: '0.1 0.1',
+      tauP: 2.0,
+      compressibility: '4.5e-5',
+      constraints: 'h-bonds',
+      cutoffScheme: 'Verlet',
+      nstlist: 40,
+      rcoulomb: 1.0,
+      rvdw: 1.0,
+      coulombtype: 'PME',
+      nstxoutCompressed: 5000,
+      nstenergy: 5000,
+      nstlog: 5000,
+      continuation: 'yes',
+      genVel: 'no',
+      define: '-DPOSRES_B',
+      dispCorr: 'EnerPres',
+      pull: {
+        group1: 'Chain_B',
+        group2: 'Chain_A',
+        geometry: 'distance',
+        dim: 'N N Y',
+        rate: 0.0,
+        k: 1000,
+        start: 'yes',
+      },
+    },
+  },
 ];
 
 export function generateMdpText(cfg: MdpConfig): string {
@@ -405,6 +502,23 @@ export function generateMdpText(cfg: MdpConfig): string {
       lines.push(`gen_temp                = ${cfg.temperature}`);
       lines.push(`gen_seed                = -1`);
     }
+
+    if (cfg.pull) {
+      lines.push(``);
+      lines.push(`; Pull code (Steered MD / Umbrella Sampling)`);
+      lines.push(`pull                    = yes`);
+      lines.push(`pull-ncoords            = 1         ; Number of reaction coordinates`);
+      lines.push(`pull-ngroups            = 2         ; Reference + pulled group`);
+      lines.push(`pull-group1-name        = ${cfg.pull.group1}`);
+      lines.push(`pull-group2-name        = ${cfg.pull.group2}`);
+      lines.push(`pull-coord1-type        = umbrella  ; Harmonic biasing potential`);
+      lines.push(`pull-coord1-geometry    = ${cfg.pull.geometry}  ; Distance / direction / cylinder`);
+      lines.push(`pull-coord1-dim         = ${cfg.pull.dim}     ; Pull axis components (X Y Z)`);
+      lines.push(`pull-coord1-groups      = 1 2`);
+      lines.push(`pull-coord1-start       = ${cfg.pull.start}       ; Use initial COM distance as reference`);
+      lines.push(`pull-coord1-rate        = ${cfg.pull.rate}      ; ${cfg.pull.rate === 0 ? '0.0 nm/ps (stationary umbrella window)' : `${cfg.pull.rate} nm/ps (${(cfg.pull.rate * 1000).toFixed(1)} nm/ns pulling speed)`}`);
+      lines.push(`pull-coord1-k           = ${cfg.pull.k}      ; Harmonic force constant (kJ mol^-1 nm^-2)`);
+    }
   } else {
     lines.push(``);
     lines.push(`pbc                     = xyz`);
@@ -503,5 +617,19 @@ export const MDP_PARAM_DOCS: MdpParamDoc[] = [
     category: 'Thermostat & Barostat',
     defaultValue: 'isotropic / semiisotropic',
     description: 'Use isotropic for soluble proteins and semiisotropic (coupled XY plane, independent Z axis) for lipid bilayers and membrane proteins.',
+  },
+  {
+    param: 'pull / pull-coord1-type',
+    category: 'Integration',
+    defaultValue: 'yes / umbrella',
+    description: 'Activates GROMACS COM pull code for Steered MD (SMD) and Umbrella Sampling with a harmonic potential (pull-coord1-type = umbrella).',
+    tip: 'Set pull-coord1-rate = 0.01 nm/ps for pulling, then 0.0 nm/ps for stationary umbrella windows.',
+  },
+  {
+    param: 'pull-coord1-k',
+    category: 'Integration',
+    defaultValue: '1000 kJ mol⁻¹ nm⁻²',
+    description: 'Harmonic spring force constant restraining the reaction coordinate. Ensure adjacent window histograms overlap cleanly in gmx wham.',
+    tip: 'Increase k (e.g. 1500–2500) across steep barrier regions if histogram gaps appear.',
   },
 ];

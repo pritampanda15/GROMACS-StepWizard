@@ -78,6 +78,11 @@ export const StepWizardSection: React.FC<{
   const [tcoupl, setTcoupl] = useState<string>('V-rescale');
   const [pcoupl, setPcoupl] = useState<string>('Parrinello-Rahman');
   const [constraints, setConstraints] = useState<string>('h-bonds');
+  const [pullGroup1, setPullGroup1] = useState<string>('Chain_B');
+  const [pullGroup2, setPullGroup2] = useState<string>('Chain_A');
+  const [pullRate, setPullRate] = useState<number>(0.01);
+  const [pullK, setPullK] = useState<number>(1000);
+  const [pullDim, setPullDim] = useState<string>('N N Y');
 
   // HPC Walltime & Storage Estimator state
   const [atoms, setAtoms] = useState<number>(65000);
@@ -104,6 +109,13 @@ export const StepWizardSection: React.FC<{
     setConstraints(p.config.constraints);
     if (p.config.nstxoutCompressed > 0) {
       setSaveIntervalPs(Math.max(1, Math.round(p.config.nstxoutCompressed * p.config.dt)));
+    }
+    if (p.config.pull) {
+      setPullGroup1(p.config.pull.group1);
+      setPullGroup2(p.config.pull.group2);
+      setPullRate(p.config.pull.rate);
+      setPullK(p.config.pull.k);
+      setPullDim(p.config.pull.dim);
     }
     if (id === 'charmm36-lipid-bilayer') setAtoms(250000);
     onTelemetryChange?.(p.config.dt * 1000, p.config.temperature);
@@ -164,8 +176,34 @@ export const StepWizardSection: React.FC<{
       pcoupl,
       constraints,
       nstxoutCompressed,
+      pull: preset.config.pull
+        ? {
+            ...preset.config.pull,
+            group1: pullGroup1,
+            group2: pullGroup2,
+            rate: pullRate,
+            k: pullK,
+            dim: pullDim,
+          }
+        : undefined,
     }),
-    [preset, dt, nsteps, timePs, temperature, nstlist, tcoupl, pcoupl, constraints, nstxoutCompressed]
+    [
+      preset,
+      dt,
+      nsteps,
+      timePs,
+      temperature,
+      nstlist,
+      tcoupl,
+      pcoupl,
+      constraints,
+      nstxoutCompressed,
+      pullGroup1,
+      pullGroup2,
+      pullRate,
+      pullK,
+      pullDim,
+    ]
   );
 
   const mdpText = useMemo(() => generateMdpText(mdpConfig), [mdpConfig]);
@@ -173,6 +211,10 @@ export const StepWizardSection: React.FC<{
   const mdpFilename =
     preset.id === 'charmm36-lipid-bilayer'
       ? 'step7_production.mdp'
+      : preset.id === 'steered-md-pull'
+      ? 'md_pull.mdp'
+      : preset.id === 'umbrella-sampling-window'
+      ? 'md_umbrella.mdp'
       : preset.id === 'energy-minimization'
       ? 'minim.mdp'
       : preset.id === 'nvt-equilibration'
@@ -183,6 +225,8 @@ export const StepWizardSection: React.FC<{
 
   const companionCmd = isEM
     ? `gmx grompp -f ${mdpFilename} -c solv_ions.gro -p topol.top -o em.tpr\ngmx mdrun -v -deffnm em`
+    : preset.config.pull
+    ? `gmx grompp -f ${mdpFilename} -c npt.gro -r npt.gro -t npt.cpt -p topol.top -n index.ndx -o ${preset.id === 'steered-md-pull' ? 'pull' : 'umbrella0'}.tpr\ngmx mdrun -v -deffnm ${preset.id === 'steered-md-pull' ? 'pull' : 'umbrella0'} -pf pullf.xvg -px pullx.xvg -nb gpu -pme gpu -bonded gpu -update gpu -pin on`
     : `gmx grompp -f ${mdpFilename} -c npt.gro -t npt.cpt -p topol.top -o md_0_1.tpr\ngmx mdrun -v -deffnm md_0_1 -nb gpu -pme gpu -bonded gpu -update gpu -nstlist ${Math.max(nstlist, 40)} -pin on -maxh ${slurmMaxh}`;
 
   const handleDownloadKit = async () => {
@@ -574,6 +618,79 @@ export const StepWizardSection: React.FC<{
                 onChange={(e) => setSaveIntervalPs(Number(e.target.value))}
                 className="ui-slider w-full"
               />
+            </div>
+          )}
+
+          {preset.config.pull && (
+            <div className="pt-2 border-t border-[var(--border-hairline)] space-y-3">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--accent-blue)]">
+                COM Pull / Umbrella Parameters
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    Ref Group (group1)
+                  </label>
+                  <input
+                    value={pullGroup1}
+                    onChange={(e) => setPullGroup1(e.target.value)}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    Pull Group (group2)
+                  </label>
+                  <input
+                    value={pullGroup2}
+                    onChange={(e) => setPullGroup2(e.target.value)}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    Pull Rate (nm/ps)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.005"
+                    min="0"
+                    max="0.1"
+                    value={pullRate}
+                    onChange={(e) => setPullRate(Number(e.target.value))}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    Force k (kJ/mol/nm²)
+                  </label>
+                  <input
+                    type="number"
+                    step="100"
+                    min="100"
+                    max="5000"
+                    value={pullK}
+                    onChange={(e) => setPullK(Number(e.target.value))}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    Pull Axis (pull-coord1-dim)
+                  </label>
+                  <select
+                    value={pullDim}
+                    onChange={(e) => setPullDim(e.target.value)}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  >
+                    <option value="N N Y">N N Y (Z-axis only — membrane / aligned)</option>
+                    <option value="Y Y Y">Y Y Y (3D radial distance)</option>
+                    <option value="Y N N">Y N N (X-axis only)</option>
+                    <option value="N Y N">N Y N (Y-axis only)</option>
+                  </select>
+                </div>
+              </div>
             </div>
           )}
         </div>

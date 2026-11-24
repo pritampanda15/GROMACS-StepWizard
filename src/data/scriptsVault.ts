@@ -3,6 +3,7 @@ export type ScriptCategory =
   | 'NVIDIA GPU'
   | 'HPC & SLURM'
   | 'Workflows'
+  | 'Umbrella Sampling'
   | 'Post-Processing'
   | 'PCA & FEL'
   | 'MM-PBSA / GBSA';
@@ -675,5 +676,132 @@ printf "0 & ! a H*\\nq\\n" | "\${GMX}" make_ndx -f lig.gro -o index_lig.ndx
 
 # 5. Merge Protein + Ligand coupling group in index.ndx (e.g. 1 | 13)
 "\${GMX}" make_ndx -f em.gro -o index.ndx`,
+  },
+  {
+    id: 'umbrella-sampling-pipeline',
+    title: 'Steered MD → Umbrella Sampling → WHAM PMF',
+    subtitle: 'Complete SMD pulling, COM distance spacing, GPU window runs, and bootstrapped gmx wham PMF',
+    category: 'Umbrella Sampling',
+    filename: 'run_umbrella_sampling.sh',
+    sourcePath: 'GROMACS Pull Code & CHAPERONg Umbrella Protocol',
+    language: 'bash',
+    badges: ['SMD', 'Umbrella Windows', 'gmx wham', 'Bootstrap PMF'],
+    params: [
+      { key: 'GMX', label: 'GROMACS Binary', defaultValue: 'gmx' },
+      { key: 'REF_GRP', label: 'Reference Group', defaultValue: 'Chain_B' },
+      { key: 'PULL_GRP', label: 'Pulled Group', defaultValue: 'Chain_A' },
+      { key: 'N_WINDOWS', label: 'Umbrella Windows', defaultValue: '24' },
+      { key: 'UNIT', label: 'PMF Unit (kCal | kJ)', defaultValue: 'kCal' },
+      { key: 'BOOTSTRAP', label: 'WHAM Bootstraps', defaultValue: '200' },
+    ],
+    renderContent: (v) => `#!/usr/bin/env bash
+# =============================================================================
+# Steered MD (SMD) -> Umbrella Sampling -> WHAM PMF Pipeline (GROMACS + GPU)
+# =============================================================================
+set -euo pipefail
+
+GMX="\${GMX:-${v.GMX}}"
+REF_GRP="${v.REF_GRP}"
+PULL_GRP="${v.PULL_GRP}"
+N_WINDOWS="${v.N_WINDOWS}"
+export GMX_ENABLE_DIRECT_GPU_COMM=1
+
+# 1. Steered MD (SMD) pulling run to generate reaction coordinate trajectory
+"\${GMX}" grompp -f md_pull.mdp -c npt.gro -t npt.cpt -p topol.top -r npt.gro -n index.ndx -o pull.tpr
+"\${GMX}" mdrun -v -deffnm pull -pf pullf.xvg -px pullx.xvg \\
+    -nb gpu -pme gpu -bonded gpu -update gpu -pin on
+
+# 2. Extract SMD frames & compute COM distances for window selection
+mkdir -p frames
+printf "0\\n" | "\${GMX}" trjconv -s pull.tpr -f pull.xtc -o frames/conf.gro -sep
+
+: > distances_summary.txt
+for f in frames/conf*.gro; do
+    idx=\${f//[^0-9]/}
+    "\${GMX}" distance -s pull.tpr -f "\${f}" -n index.ndx \\
+        -select "com of group \\"\${REF_GRP}\\" plus com of group \\"\${PULL_GRP}\\"" \\
+        -oall "frames/dist\${idx}.xvg" >/dev/null 2>&1
+    d=$(awk '!/^[@#]/ {print $2; exit}' "frames/dist\${idx}.xvg")
+    printf "%s\\t%s\\n" "\${idx}" "\${d}" >> distances_summary.txt
+done
+sort -n distances_summary.txt -o distances_summary.txt
+
+# 3. Run Umbrella Sampling windows (assuming selected conf_win0.gro .. conf_winN.gro)
+: > tpr-files.dat
+: > pullf-files.dat
+for ((w = 0; w < N_WINDOWS; w++)); do
+    echo "=== Running Umbrella Window \${w} / \${N_WINDOWS} ==="
+    "\${GMX}" grompp -f npt_umbrella.mdp -c "conf_win\${w}.gro" -r "conf_win\${w}.gro" \\
+        -p topol.top -n index.ndx -o "npt_win\${w}.tpr"
+    "\${GMX}" mdrun -deffnm "npt_win\${w}" -nb gpu -pme gpu -bonded gpu -update gpu -pin on
+
+    "\${GMX}" grompp -f md_umbrella.mdp -c "npt_win\${w}.gro" -r "npt_win\${w}.gro" \\
+        -t "npt_win\${w}.cpt" -p topol.top -n index.ndx -o "umbrella\${w}.tpr"
+    "\${GMX}" mdrun -deffnm "umbrella\${w}" -pf "pullf-umbrella\${w}.xvg" -px "pullx-umbrella\${w}.xvg" \\
+        -nb gpu -pme gpu -bonded gpu -update gpu -pin on
+
+    echo "umbrella\${w}.tpr" >> tpr-files.dat
+    echo "pullf-umbrella\${w}.xvg" >> pullf-files.dat
+done
+
+# 4. Reconstruct Potential of Mean Force (PMF) with WHAM & bootstrap error bars
+"\${GMX}" wham -it tpr-files.dat -if pullf-files.dat \\
+    -o profile.xvg -hist histo.xvg \\
+    -unit ${v.UNIT} -b 1000 -nBootstrap ${v.BOOTSTRAP} -bsres bsResult.xvg`,
+  },
+  {
+    id: 'slurm-umbrella-array',
+    title: 'SLURM GPU Job Array for Umbrella Windows',
+    subtitle: 'Runs all umbrella sampling windows concurrently across cluster GPUs via --array',
+    category: 'Umbrella Sampling',
+    filename: 'slurm_umbrella_array.sh',
+    sourcePath: 'GROMACS Pull Code & SLURM Job Array Best Practice',
+    language: 'bash',
+    badges: ['SLURM Array', 'Parallel Windows', 'NVIDIA GPU', 'WHAM'],
+    params: [
+      { key: 'ACCOUNT', label: 'SLURM Account', defaultValue: 'YOUR_ALLOCATION' },
+      { key: 'ARRAY_MAX', label: 'Last Window Index (0..N)', defaultValue: '23' },
+      { key: 'TIME', label: 'Walltime / Window', defaultValue: '06:00:00' },
+      { key: 'NTOMP', label: 'OpenMP Threads', defaultValue: '8' },
+    ],
+    renderContent: (v) => `#!/usr/bin/env bash
+# =============================================================================
+# SLURM GPU Job Array: Parallel Umbrella Sampling Windows (0..${v.ARRAY_MAX})
+# Submit with: sbatch slurm_umbrella_array.sh
+# =============================================================================
+#SBATCH --job-name=us_window
+#SBATCH --array=0-${v.ARRAY_MAX}
+#SBATCH --time=${v.TIME}
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=${v.NTOMP}
+#SBATCH --gpus-per-node=1
+#SBATCH --account=${v.ACCOUNT}
+#SBATCH --output=logs/us_%A_%a.out
+
+set -euo pipefail
+mkdir -p logs
+module load GROMACS/2024.2-CUDA
+
+WIN="\${SLURM_ARRAY_TASK_ID}"
+export GMX_ENABLE_DIRECT_GPU_COMM=1
+export GMX_CUDA_GRAPH=1
+
+# 1. Short restrained NPT equilibration for window \${WIN}
+gmx grompp -f npt_umbrella.mdp -c "conf_win\${WIN}.gro" -r "conf_win\${WIN}.gro" \\
+    -p topol.top -n index.ndx -o "npt_win\${WIN}.tpr"
+gmx mdrun -deffnm "npt_win\${WIN}" -ntmpi 1 -ntomp ${v.NTOMP} \\
+    -nb gpu -pme gpu -bonded gpu -update gpu -pin on
+
+# 2. Umbrella production run writing pullf/pullx for WHAM
+gmx grompp -f md_umbrella.mdp -c "npt_win\${WIN}.gro" -r "npt_win\${WIN}.gro" \\
+    -t "npt_win\${WIN}.cpt" -p topol.top -n index.ndx -o "umbrella\${WIN}.tpr"
+gmx mdrun -deffnm "umbrella\${WIN}" -pf "pullf-umbrella\${WIN}.xvg" -px "pullx-umbrella\${WIN}.xvg" \\
+    -ntmpi 1 -ntomp ${v.NTOMP} -nb gpu -pme gpu -bonded gpu -update gpu -nstlist 100 -pin on
+
+# After all array tasks finish, run WHAM:
+#   ls -v umbrella*.tpr > tpr-files.dat
+#   ls -v pullf-umbrella*.xvg > pullf-files.dat
+#   gmx wham -it tpr-files.dat -if pullf-files.dat -o profile.xvg -hist histo.xvg -unit kCal -b 1000 -nBootstrap 200`,
   },
 ];

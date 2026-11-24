@@ -6,6 +6,7 @@ import {
   Cpu,
   FastForward,
   FlaskConical,
+  GitCommitHorizontal,
   Play,
   Terminal,
   Wrench,
@@ -16,7 +17,7 @@ import {
   SegmentedControl,
 } from './UiPrimitives';
 
-type BuilderTab = 'mdrun' | 'grompp' | 'setup' | 'postprocess' | 'extend' | 'pca' | 'mmpbsa';
+type BuilderTab = 'mdrun' | 'grompp' | 'setup' | 'postprocess' | 'extend' | 'pca' | 'mmpbsa' | 'umbrella';
 
 export const CommandBuilderSection: React.FC = () => {
   const [tab, setTab] = useState<BuilderTab>('mdrun');
@@ -82,6 +83,13 @@ export const CommandBuilderSection: React.FC = () => {
   const [mmpbsaLig, setMmpbsaLig] = useState('13');
   const [mmpbsaTpr, setMmpbsaTpr] = useState('md_0_100.tpr');
   const [mmpbsaXtc, setMmpbsaXtc] = useState('md_0_100_fit.xtc');
+
+  // umbrella / WHAM state
+  const [usRefGrp, setUsRefGrp] = useState('Chain_B');
+  const [usPullGrp, setUsPullGrp] = useState('Chain_A');
+  const [usUnit, setUsUnit] = useState<'kCal' | 'kJ'>('kCal');
+  const [usSkipPs, setUsSkipPs] = useState(1000);
+  const [usBootstrap, setUsBootstrap] = useState(200);
 
   const { command, activeFlags } = useMemo(() => {
     if (tab === 'mdrun') {
@@ -296,6 +304,36 @@ export const CommandBuilderSection: React.FC = () => {
       };
     }
 
+    if (tab === 'umbrella') {
+      const cmd = [
+        `# 1. Steered MD (SMD) pulling run to generate starting configurations`,
+        `${binary} grompp -f md_pull.mdp -c npt.gro -r npt.gro -t npt.cpt -p topol.top -n index.ndx -o pull.tpr`,
+        `${binary} mdrun -v -deffnm pull -pf pullf.xvg -px pullx.xvg -nb gpu -pme gpu -bonded gpu -update gpu -pin on`,
+        ``,
+        `# 2. Extract SMD snapshots & measure COM distances between ${usRefGrp} and ${usPullGrp}`,
+        `printf "0\\n" | ${binary} trjconv -s pull.tpr -f pull.xtc -o conf.gro -sep`,
+        `${binary} distance -s pull.tpr -f conf0.gro -n index.ndx -select 'com of group "${usRefGrp}" plus com of group "${usPullGrp}"' -oall dist0.xvg`,
+        ``,
+        `# 3. Run Umbrella Sampling window (repeat across spaced windows 0..N)`,
+        `${binary} grompp -f md_umbrella.mdp -c conf_win0.gro -r conf_win0.gro -p topol.top -n index.ndx -o umbrella0.tpr`,
+        `${binary} mdrun -v -deffnm umbrella0 -pf pullf-umbrella0.xvg -px pullx-umbrella0.xvg -nb gpu -pme gpu -bonded gpu -update gpu -pin on`,
+        ``,
+        `# 4. Reconstruct PMF profile & histogram overlap via gmx wham`,
+        `ls -v umbrella*.tpr > tpr-files.dat`,
+        `ls -v pullf-umbrella*.xvg > pullf-files.dat`,
+        `${binary} wham -it tpr-files.dat -if pullf-files.dat -o profile.xvg -hist histo.xvg -unit ${usUnit} -b ${usSkipPs} -nBootstrap ${usBootstrap} -bsres bsResult.xvg`,
+      ].join('\n');
+      return {
+        command: cmd,
+        activeFlags: [
+          { flag: '-pf pullf.xvg -px pullx.xvg', meaning: 'Writes pull force & COM distance timeseries for WHAM' },
+          { flag: `gmx distance (${usRefGrp} ↔ ${usPullGrp})`, meaning: 'Measures COM separation to pick evenly spaced windows' },
+          { flag: `gmx wham -unit ${usUnit} -b ${usSkipPs}`, meaning: `Discards first ${usSkipPs} ps equilibration per window` },
+          { flag: `-nBootstrap ${usBootstrap} -bsres`, meaning: 'Bayesian bootstrap error estimation along PMF curve' },
+        ],
+      };
+    }
+
     // mmpbsa
     const cmd = [
       `# 1. Activate gmx_MMPBSA conda environment`,
@@ -331,6 +369,7 @@ export const CommandBuilderSection: React.FC = () => {
     ppPrefix, ppCenterPbc, ppFit, ppRmsd, ppSnapshots, ppSkip,
     extendNs, extendPrefix, pcaGroup, pcaStart, pcaEnd, pcaEntropy,
     mmpbsaRec, mmpbsaLig, mmpbsaTpr, mmpbsaXtc,
+    usRefGrp, usPullGrp, usUnit, usSkipPs, usBootstrap,
   ]);
 
   return (
@@ -373,6 +412,7 @@ export const CommandBuilderSection: React.FC = () => {
               { value: 'postprocess', label: 'PBC & RMSD', icon: <Activity className="w-3.5 h-3.5" /> },
               { value: 'extend', label: 'Extend Run', icon: <FastForward className="w-3.5 h-3.5" /> },
               { value: 'pca', label: 'PCA & FEL', icon: <Cpu className="w-3.5 h-3.5" /> },
+              { value: 'umbrella', label: 'Umbrella / WHAM', icon: <GitCommitHorizontal className="w-3.5 h-3.5" /> },
               { value: 'mmpbsa', label: 'gmx_MMPBSA', icon: <FlaskConical className="w-3.5 h-3.5" /> },
             ]}
           />
@@ -831,6 +871,71 @@ export const CommandBuilderSection: React.FC = () => {
                 <input
                   value={mmpbsaXtc}
                   onChange={(e) => setMmpbsaXtc(e.target.value)}
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                />
+              </div>
+            </div>
+          )}
+
+          {tab === 'umbrella' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[12px] text-[var(--text-secondary)] font-medium">
+                  Reference Group
+                </label>
+                <input
+                  value={usRefGrp}
+                  onChange={(e) => setUsRefGrp(e.target.value)}
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[12px] text-[var(--text-secondary)] font-medium">
+                  Pulled Group
+                </label>
+                <input
+                  value={usPullGrp}
+                  onChange={(e) => setUsPullGrp(e.target.value)}
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[12px] text-[var(--text-secondary)] font-medium">
+                  WHAM PMF Unit
+                </label>
+                <select
+                  value={usUnit}
+                  onChange={(e) => setUsUnit(e.target.value as 'kCal' | 'kJ')}
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                >
+                  <option value="kCal">kCal (kcal/mol)</option>
+                  <option value="kJ">kJ (kJ/mol)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[12px] text-[var(--text-secondary)] font-medium">
+                  Equil Discard (-b ps)
+                </label>
+                <input
+                  type="number"
+                  step={500}
+                  min={0}
+                  value={usSkipPs}
+                  onChange={(e) => setUsSkipPs(Math.max(0, Number(e.target.value)))}
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[12px] text-[var(--text-secondary)] font-medium">
+                  Bootstrap Resamples (-nBootstrap)
+                </label>
+                <input
+                  type="number"
+                  step={50}
+                  min={0}
+                  max={1000}
+                  value={usBootstrap}
+                  onChange={(e) => setUsBootstrap(Math.max(0, Number(e.target.value)))}
                   className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
                 />
               </div>
