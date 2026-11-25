@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+title: "GROMACS StepWizard"
+message: "If you use GROMACS StepWizard in your research or teaching, please cite it using the metadata below."
+type: software
+authors:
+  - family-names: "Panda"
+    given-names: "Pritam Kumar"
+    affiliation: "Stanford University"
+repository-code: "https://github.com/pritampanda15/GROMACS-StepWizard"
+url: "https://pritampanda15.github.io/GROMACS-StepWizard/"
+license: "Apache-2.0"
+keywords:
+  - GROMACS
+  - molecular dynamics
+  - NVIDIA GPU
+  - HPC
+  - umbrella sampling
+  - free energy perturbation
+  - computational biophysics
+version: "1.0.0"
+date-released: "2026-11-25"

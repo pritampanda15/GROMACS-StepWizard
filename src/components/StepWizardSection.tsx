@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
+  Check,
   CheckCircle2,
   Clock,
   Cpu,
@@ -8,6 +9,7 @@ import {
   Gauge,
   HardDrive,
   Layers,
+  Link2,
   PackageCheck,
   Server,
   SlidersHorizontal,
@@ -97,6 +99,7 @@ export const StepWizardSection: React.FC<{
   const [queueHours, setQueueHours] = useState<number>(24);
   const [exportingZip, setExportingZip] = useState<boolean>(false);
   const [zipToast, setZipToast] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
   const preset = useMemo(
     () => MDP_PRESETS.find((p) => p.id === selectedPresetId) ?? MDP_PRESETS[0],
@@ -144,6 +147,55 @@ export const StepWizardSection: React.FC<{
       applyPreset(externalPresetId);
     }
   }, [externalPresetId]);
+
+  // Restore shareable setup from URL query parameters on initial load
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const presetParam = params.get('preset');
+    const nsParam = params.get('ns');
+    const dtParam = params.get('dt');
+    const tempParam = params.get('t');
+    const nstlistParam = params.get('nstlist');
+
+    if (presetParam && MDP_PRESETS.some((p) => p.id === presetParam)) {
+      applyPreset(presetParam);
+    }
+    if (nsParam) {
+      const n = parseFloat(nsParam);
+      if (Number.isFinite(n) && n >= 0.001 && n <= 5000) setTimeNs(n);
+    }
+    if (dtParam) {
+      const d = parseFloat(dtParam);
+      if ([0.001, 0.002, 0.004, 0.02].includes(d)) setDt(d);
+    }
+    if (tempParam) {
+      const t = parseFloat(tempParam);
+      if (Number.isFinite(t) && t >= 200 && t <= 500) setTemperature(t);
+    }
+    if (nstlistParam) {
+      const nl = parseInt(nstlistParam, 10);
+      if (Number.isFinite(nl) && nl >= 5 && nl <= 400) setNstlist(nl);
+    }
+  }, []);
+
+  const handleCopyShareLink = async () => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('preset', selectedPresetId);
+    url.searchParams.set('ns', String(timeNs));
+    url.searchParams.set('dt', String(dt));
+    url.searchParams.set('t', String(temperature));
+    url.searchParams.set('nstlist', String(nstlist));
+    window.history.replaceState({}, '', url.toString());
+    try {
+      await navigator.clipboard.writeText(url.toString());
+    } catch {
+      // ignore clipboard fallback
+    }
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 1800);
+  };
 
   const isEM = preset.config.integrator === 'steep';
 
@@ -322,6 +374,25 @@ export const StepWizardSection: React.FC<{
                 {zipToast}
               </span>
             )}
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              onClick={handleCopyShareLink}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full glass-surface hover:border-[var(--accent-blue)] text-[var(--text-primary)] text-[12.5px] font-medium transition-colors cursor-pointer"
+              title="Copy shareable URL with current preset, duration, dt, and temperature"
+            >
+              {copiedLink ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#30d158]" />
+                  <span className="text-[#248a3d] dark:text-[#30d158]">Link Copied</span>
+                </>
+              ) : (
+                <>
+                  <Link2 className="w-3.5 h-3.5 text-[var(--accent-blue)]" />
+                  <span>Share Setup</span>
+                </>
+              )}
+            </motion.button>
             <motion.button
               whileTap={{ scale: 0.96 }}
               type="button"

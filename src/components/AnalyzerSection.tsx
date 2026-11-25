@@ -3,10 +3,15 @@ import { motion } from 'framer-motion';
 import {
   Activity,
   AlertTriangle,
+  Box,
+  Bug,
+  Check,
   CheckCircle2,
+  Copy,
   FileSearch,
   FileText,
   Info,
+  Search,
   Sparkles,
   Upload,
   Wand2,
@@ -14,7 +19,113 @@ import {
 } from 'lucide-react';
 import { CodeShowcase, SegmentedControl } from './UiPrimitives';
 
-type InspectorMode = 'mdp' | 'xvg';
+type InspectorMode = 'mdp' | 'xvg' | 'troubleshooter' | 'ions';
+
+interface CrashEntry {
+  id: string;
+  errorPattern: string;
+  stage: string;
+  rootCause: string;
+  fixes: string[];
+  command: string;
+}
+
+const GROMACS_CRASH_DB: CrashEntry[] = [
+  {
+    id: 'lincs-settle',
+    errorPattern: 'LINCS WARNING / step X: Water molecule starting at atom Y can not be settled',
+    stage: 'Equilibration / Production',
+    rootCause: 'Atomic overlap, unrelaxed steric clash, or overly aggressive timestep (dt) causing runaway forces.',
+    fixes: [
+      'Check Fmax from Energy Minimization — ensure Fmax < 1000 kJ/mol/nm (ideally < 500 for membranes).',
+      'Start NVT with dt = 0.001 ps (1 fs) and position restraints (-DPOSRES) before stepping up to 2 fs.',
+      'For 4 fs HMR runs, verify HMassRepartition was applied to topol.top and set lincs_iter = 2.',
+      'Inspect the offending atom number Y in VMD/PyMOL to spot bad ligand geometry or overlapping atoms.',
+    ],
+    command: 'gmx energy -f em.edr -o potential.xvg && gmx grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr',
+  },
+  {
+    id: '1-4-table',
+    errorPattern: '1-4 interaction between atoms X and Y at distance Z is larger than the 1-4 table size',
+    stage: 'MD Run / Blow-up',
+    rootCause: 'System is blowing up — a bonded/torsion group stretched dramatically due to a bad ligand topology, missing exclusions, or high pressure shock.',
+    fixes: [
+      'Verify ligand .itp/.prm charges and dihedrals (CGenFF penalty scores > 50 often need refinement).',
+      'Use C-rescale instead of Parrinello-Rahman during early NPT equilibration to avoid box oscillations.',
+      'Confirm refcoord_scaling = com is set when combining position restraints with pressure coupling.',
+    ],
+    command: 'gmx trjconv -s nvt.tpr -f step*.pdb -o crash_check.pdb -pbc mol',
+  },
+  {
+    id: 'dd-cell-size',
+    errorPattern: 'There is no domain decomposition for N ranks that is compatible with the given box and a minimum cell size',
+    stage: 'MPI / Multi-GPU Scaling',
+    rootCause: 'Too many MPI ranks (-ntmpi / mpirun -np) for a small periodic box, or long-range constraints/restraints forcing a large minimum DD cell.',
+    fixes: [
+      'Reduce the number of MPI ranks (e.g., use 1–2 ranks with more OpenMP threads -ntomp 8 instead of 8 ranks).',
+      'Pass -rdd <nm> explicitly only if needed, or switch small systems to single-GPU + CUDA MPS (-multidir).',
+    ],
+    command: 'gmx mdrun -v -deffnm md_0_1 -ntmpi 1 -ntomp 8 -nb gpu -pme gpu -bonded gpu -update gpu -pin on',
+  },
+  {
+    id: 'atom-mismatch',
+    errorPattern: 'Fatal error: number of coordinates in coordinate file (.gro) does not match topology (topol.top)',
+    stage: 'grompp Preprocessing',
+    rootCause: 'Atom counts drifted after manual ligand merging, gmx insert-molecules -replace, or forgetting to update [ molecules ] in topol.top.',
+    fixes: [
+      'Compute (topology_atoms - gro_atoms) / 3 for 3-point water (TIP3P/SPC/E) and subtract from SOL in topol.top.',
+      'Check line 2 of complex.gro — it must equal the exact number of atom lines below it.',
+      'Verify ligand residue order in [ molecules ] matches the exact order of coordinates in the .gro file.',
+    ],
+    command: 'tail -n 20 topol.top && head -n 3 complex.gro',
+  },
+  {
+    id: 'update-gpu-disabled',
+    errorPattern: 'Update groups can not be used / -update gpu is not supported for this system',
+    stage: 'NVIDIA GPU Offload',
+    rootCause: 'Constraints set to all-bonds, Nose-Hoover/Parrinello-Rahman incompatible combo in older GROMACS, or pull/FEP features forcing CPU updates.',
+    fixes: [
+      'Set constraints = h-bonds (not all-bonds) and cutoff-scheme = Verlet in your .mdp file.',
+      'Use V-rescale + C-rescale (or Parrinello-Rahman in GROMACS 2022+) for full GPU-resident updates.',
+      'For alchemical FEP decoupling, omit -update gpu and keep -nb gpu -pme gpu -bonded gpu.',
+    ],
+    command: 'gmx mdrun -v -deffnm md_0_1 -nb gpu -pme gpu -bonded gpu -update gpu -nstlist 100 -pin on',
+  },
+  {
+    id: 'checkpoint-append',
+    errorPattern: 'Output file appending has been requested, but some output files listed in the checkpoint (.cpt) are not present or modified',
+    stage: 'Restart / Extend on HPC',
+    rootCause: 'An existing .xtc/.edr/.log file was moved, truncated, or renamed between SLURM segments.',
+    fixes: [
+      'Keep all deffnm outputs (.xtc, .edr, .log, .cpt) intact in the working directory when using -append.',
+      'If files were archived or truncated, restart cleanly with -noappend (creates part0002 files) and stitch later with gmx trjcat.',
+    ],
+    command: 'gmx mdrun -s next.tpr -deffnm md_0_1 -cpi md_0_1.cpt -noappend && gmx trjcat -f md_0_1.part*.xtc -o merged.xtc',
+  },
+  {
+    id: 'cuda-oom',
+    errorPattern: 'CUDA error #2 (cudaErrorMemoryAllocation): out of memory / cuFFT plan failed',
+    stage: 'NVIDIA GPU Run',
+    rootCause: 'Too many concurrent MPS simulations on one GPU, or a huge (>1M atom) system exceeding single-GPU VRAM.',
+    fixes: [
+      'Lower concurrent simulations per GPU under CUDA MPS or switch to a larger MIG slice (e.g., 2g.20gb).',
+      'Distribute PME across multiple GPUs with export GMX_GPU_PME_DECOMPOSITION=1 and -npme 2 (cuFFTMp).',
+      'Reduce -nstlist slightly (e.g. 40 instead of 200) to shrink the GPU Verlet pair-list buffer footprint.',
+    ],
+    command: 'nvidia-smi && export GMX_ENABLE_DIRECT_GPU_COMM=1 && gmx mdrun -deffnm md_0_1 -nb gpu -pme gpu -nstlist 40',
+  },
+  {
+    id: 'nonzero-charge',
+    errorPattern: 'NOTE: System has non-zero total charge',
+    stage: 'grompp / PME Setup',
+    rootCause: 'Net charge on the simulation box introduces a uniform neutralizing background plasma artifact under PME electrostatics.',
+    fixes: [
+      'Run gmx genion with -neutral (and optionally -conc 0.15 for physiological NaCl/KCl) before Energy Minimization.',
+      'If non-integer charge (e.g. -0.002), verify ligand partial charges sum cleanly to an integer in ligand.itp.',
+    ],
+    command: 'printf "SOL\\n" | gmx genion -s ions.tpr -o solv_ions.gro -p topol.top -pname NA -nname CL -neutral -conc 0.15',
+  },
+];
 
 interface LintIssue {
   id: string;
@@ -357,8 +468,74 @@ export const AnalyzerSection: React.FC = () => {
   const [xvgOrLogText, setXvgOrLogText] = useState<string>(SAMPLE_RMSD_XVG);
   const [fileKind, setFileKind] = useState<'xvg' | 'log'>('xvg');
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [crashQuery, setCrashQuery] = useState<string>('');
+  const [copiedCrashId, setCopiedCrashId] = useState<string | null>(null);
+
+  // Box & Ion calculator state
+  const [boxShape, setBoxShape] = useState<'cubic' | 'dodecahedron' | 'octahedron' | 'rect'>('dodecahedron');
+  const [boxLx, setBoxLx] = useState<number>(9.5);
+  const [boxLy, setBoxLy] = useState<number>(9.5);
+  const [boxLz, setBoxLz] = useState<number>(9.5);
+  const [soluteCharge, setSoluteCharge] = useState<number>(-4);
+  const [saltMolarity, setSaltMolarity] = useState<number>(0.15);
+  const [soluteFraction, setSoluteFraction] = useState<number>(12);
+  const [cationName, setCationName] = useState<'NA' | 'K'>('NA');
+
   const mdpFileRef = useRef<HTMLInputElement>(null);
   const dataFileRef = useRef<HTMLInputElement>(null);
+
+  const filteredCrashes = useMemo(() => {
+    const q = crashQuery.trim().toLowerCase();
+    if (!q) return GROMACS_CRASH_DB;
+    return GROMACS_CRASH_DB.filter(
+      (c) =>
+        c.errorPattern.toLowerCase().includes(q) ||
+        c.rootCause.toLowerCase().includes(q) ||
+        c.stage.toLowerCase().includes(q) ||
+        c.fixes.some((f) => f.toLowerCase().includes(q))
+    );
+  }, [crashQuery]);
+
+  const ionCalc = useMemo(() => {
+    const rawVolNm3 =
+      boxShape === 'cubic'
+        ? boxLx ** 3
+        : boxShape === 'dodecahedron'
+        ? (Math.SQRT1_2) * boxLx ** 3
+        : boxShape === 'octahedron'
+        ? ((4 / (3 * Math.sqrt(3))) * boxLx ** 3)
+        : boxLx * boxLy * boxLz;
+    const effSolventVol = rawVolNm3 * Math.max(0.1, 1 - soluteFraction / 100);
+    // 1 M = 0.602214076 molecules / nm^3; bulk water ~ 33.3 molecules / nm^3
+    const saltPairs = Math.round(saltMolarity * 0.602214076 * effSolventVol);
+    const extraCations = soluteCharge < 0 ? Math.abs(Math.round(soluteCharge)) : 0;
+    const extraAnions = soluteCharge > 0 ? Math.round(soluteCharge) : 0;
+    const totalPos = saltPairs + extraCations;
+    const totalNeg = saltPairs + extraAnions;
+    const approxWaters = Math.max(0, Math.round(effSolventVol * 33.3) - totalPos - totalNeg);
+    const genionExactCmd = `printf "SOL\\n" | gmx genion -s ions.tpr -o solv_ions.gro -p topol.top -pname ${cationName} -nname CL -np ${totalPos} -nn ${totalNeg}`;
+    const genionAutoCmd = `printf "SOL\\n" | gmx genion -s ions.tpr -o solv_ions.gro -p topol.top -pname ${cationName} -nname CL -neutral -conc ${saltMolarity}`;
+    return {
+      rawVolNm3,
+      effSolventVol,
+      saltPairs,
+      totalPos,
+      totalNeg,
+      approxWaters,
+      genionExactCmd,
+      genionAutoCmd,
+    };
+  }, [boxShape, boxLx, boxLy, boxLz, soluteCharge, saltMolarity, soluteFraction, cationName]);
+
+  const copyCrashCmd = async (id: string, cmd: string) => {
+    try {
+      await navigator.clipboard.writeText(cmd);
+    } catch {
+      // ignore
+    }
+    setCopiedCrashId(id);
+    setTimeout(() => setCopiedCrashId(null), 1500);
+  };
 
   const issues = useMemo(() => lintMdp(mdpText), [mdpText]);
   const errorCount = issues.filter((i) => i.severity === 'error').length;
@@ -461,22 +638,27 @@ export const AnalyzerSection: React.FC = () => {
               <FileSearch className="w-3.5 h-3.5" /> Client-Side File Diagnostics
             </span>
             <h2 className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.025em] text-[var(--text-primary)]">
-              MDP Linter &amp; XVG / <code className="font-mono text-[20px]">md.log</code> Analyzer
+              Inspector, Error Troubleshooter &amp; Ion Calculator
             </h2>
             <p className="text-[13.5px] text-[var(--text-secondary)] mt-1">
-              100% local in-browser inspection — audit `.mdp` files for ensemble &amp; GPU issues or drop `.xvg` / `md.log` outputs for instant plots &amp; benchmarks.
+              100% local in-browser diagnostics — lint `.mdp` files, plot `.xvg` / `md.log`, debug common GROMACS crashes, and compute exact box ion counts.
             </p>
           </div>
 
-          <SegmentedControl<InspectorMode>
-            layoutId="inspector-mode-seg"
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: 'mdp', label: 'MDP Sanity Linter', icon: <Wand2 className="w-3.5 h-3.5" /> },
-              { value: 'xvg', label: 'XVG & md.log Plotter', icon: <Activity className="w-3.5 h-3.5" /> },
-            ]}
-          />
+          <div className="overflow-x-auto pb-1">
+            <SegmentedControl<InspectorMode>
+              layoutId="inspector-mode-seg"
+              size="sm"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: 'mdp', label: 'MDP Linter', icon: <Wand2 className="w-3.5 h-3.5" /> },
+                { value: 'xvg', label: 'XVG / md.log', icon: <Activity className="w-3.5 h-3.5" /> },
+                { value: 'troubleshooter', label: 'Crash Fixes', icon: <Bug className="w-3.5 h-3.5" /> },
+                { value: 'ions', label: 'Box & Ions', icon: <Box className="w-3.5 h-3.5" /> },
+              ]}
+            />
+          </div>
         </div>
       </div>
 
@@ -623,7 +805,7 @@ export const AnalyzerSection: React.FC = () => {
             </div>
           </div>
         </div>
-      ) : (
+      ) : mode === 'xvg' ? (
         <div className="space-y-5">
           {/* Upload & Sample Bar */}
           <div className="surface-card p-5 flex flex-wrap items-center justify-between gap-3">
@@ -841,6 +1023,235 @@ export const AnalyzerSection: React.FC = () => {
               </div>
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {mode === 'troubleshooter' && (
+        <div className="space-y-4">
+          <div className="surface-card p-5">
+            <div className="relative">
+              <Search className="w-4 h-4 text-[var(--text-tertiary)] absolute left-4 top-1/2 -translate-y-1/2" />
+              <input
+                type="search"
+                value={crashQuery}
+                onChange={(e) => setCrashQuery(e.target.value)}
+                placeholder="Paste error message (e.g., LINCS, water cannot be settled, domain decomposition, atom mismatch, CUDA OOM)..."
+                className="ui-input w-full pl-11 pr-4 py-3 text-[13.5px]"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredCrashes.map((item) => (
+              <div key={item.id} className="surface-card p-5 flex flex-col justify-between gap-3">
+                <div className="space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[10.5px] font-semibold px-2.5 py-0.5 rounded-full bg-[#ff3b30]/12 text-[#ff3b30]">
+                      {item.stage}
+                    </span>
+                  </div>
+                  <h3 className="font-mono text-[13px] font-semibold text-[var(--text-primary)] leading-snug">
+                    {item.errorPattern}
+                  </h3>
+                  <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+                    <strong className="text-[var(--text-primary)]">Root Cause:</strong> {item.rootCause}
+                  </p>
+                  <ul className="space-y-1 text-[12px] text-[var(--text-secondary)] list-disc pl-4">
+                    {item.fixes.map((fix, idx) => (
+                      <li key={idx}>{fix}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="rounded-xl bg-[var(--bg-code)] text-[#e6edf3] px-3.5 py-2.5 flex items-center justify-between gap-3 border border-white/10">
+                  <code className="text-[11.5px] font-mono text-[#7ee787] overflow-x-auto whitespace-nowrap">
+                    {item.command}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => copyCrashCmd(item.id, item.command)}
+                    className="shrink-0 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+                    aria-label="Copy diagnostic fix command"
+                  >
+                    {copiedCrashId === item.id ? (
+                      <Check className="w-3.5 h-3.5 text-[#30d158]" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {mode === 'ions' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-5 surface-card p-5 sm:p-6 space-y-4">
+            <h3 className="text-[16px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+              Simulation Box &amp; Ionic Strength
+            </h3>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+                  Box Geometry
+                </label>
+                <select
+                  value={boxShape}
+                  onChange={(e) =>
+                    setBoxShape(e.target.value as 'cubic' | 'dodecahedron' | 'octahedron' | 'rect')
+                  }
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1"
+                >
+                  <option value="dodecahedron">Rhombic Dodecahedron</option>
+                  <option value="cubic">Cubic</option>
+                  <option value="octahedron">Truncated Octahedron</option>
+                  <option value="rect">Rectangular (Membrane)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+                  Cation Type
+                </label>
+                <select
+                  value={cationName}
+                  onChange={(e) => setCationName(e.target.value as 'NA' | 'K')}
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                >
+                  <option value="NA">Na⁺ / Cl⁻ (NA / CL)</option>
+                  <option value="K">K⁺ / Cl⁻ (K / CL)</option>
+                </select>
+              </div>
+            </div>
+
+            {boxShape === 'rect' ? (
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">Lx (nm)</label>
+                  <input type="number" step={0.5} min={2} value={boxLx} onChange={(e) => setBoxLx(Math.max(1, Number(e.target.value)))} className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono" />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">Ly (nm)</label>
+                  <input type="number" step={0.5} min={2} value={boxLy} onChange={(e) => setBoxLy(Math.max(1, Number(e.target.value)))} className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono" />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">Lz (nm)</label>
+                  <input type="number" step={0.5} min={2} value={boxLz} onChange={(e) => setBoxLz(Math.max(1, Number(e.target.value)))} className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono" />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="text-[12px] font-medium text-[var(--text-secondary)] flex justify-between">
+                  <span>Box Vector Edge Length (d / L)</span>
+                  <span className="font-mono text-[var(--text-primary)]">{boxLx.toFixed(1)} nm</span>
+                </label>
+                <input
+                  type="range"
+                  min={4}
+                  max={25}
+                  step={0.5}
+                  value={boxLx}
+                  onChange={(e) => setBoxLx(Number(e.target.value))}
+                  className="ui-slider w-full mt-2"
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+                  Solute Net Charge (e)
+                </label>
+                <input
+                  type="number"
+                  step={1}
+                  value={soluteCharge}
+                  onChange={(e) => setSoluteCharge(Number(e.target.value))}
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+                  Target Salt (M)
+                </label>
+                <input
+                  type="number"
+                  step={0.05}
+                  min={0}
+                  max={2}
+                  value={saltMolarity}
+                  onChange={(e) => setSaltMolarity(Math.max(0, Number(e.target.value)))}
+                  className="ui-input w-full px-3 py-2 text-[13px] mt-1 font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[12px] font-medium text-[var(--text-secondary)] flex justify-between">
+                <span>Solute Excluded Volume</span>
+                <span className="font-mono text-[var(--text-primary)]">{soluteFraction}%</span>
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={45}
+                step={1}
+                value={soluteFraction}
+                onChange={(e) => setSoluteFraction(Number(e.target.value))}
+                className="ui-slider w-full mt-2"
+              />
+            </div>
+          </div>
+
+          <div className="lg:col-span-7 space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="surface-card p-4">
+                <div className="text-[11.5px] text-[var(--text-secondary)]">Box Volume</div>
+                <div className="text-[22px] font-semibold font-mono tabular-nums text-[var(--text-primary)] mt-1">
+                  {ionCalc.rawVolNm3.toFixed(0)} nm³
+                </div>
+                <div className="text-[10.5px] text-[var(--text-tertiary)]">
+                  Solvent: {ionCalc.effSolventVol.toFixed(0)} nm³
+                </div>
+              </div>
+              <div className="surface-card p-4">
+                <div className="text-[11.5px] text-[var(--text-secondary)]">Est. Water Mols</div>
+                <div className="text-[22px] font-semibold font-mono tabular-nums text-[var(--accent-blue)] mt-1">
+                  {ionCalc.approxWaters.toLocaleString()}
+                </div>
+                <div className="text-[10.5px] text-[var(--text-tertiary)]">~33.3 H₂O/nm³</div>
+              </div>
+              <div className="surface-card p-4">
+                <div className="text-[11.5px] text-[var(--text-secondary)]">Cations ({cationName}⁺)</div>
+                <div className="text-[22px] font-semibold font-mono tabular-nums text-[#248a3d] dark:text-[#30d158] mt-1">
+                  {ionCalc.totalPos}
+                </div>
+                <div className="text-[10.5px] text-[var(--text-tertiary)]">
+                  {ionCalc.saltPairs} salt + {ionCalc.totalPos - ionCalc.saltPairs} neutral
+                </div>
+              </div>
+              <div className="surface-card p-4">
+                <div className="text-[11.5px] text-[var(--text-secondary)]">Anions (Cl⁻)</div>
+                <div className="text-[22px] font-semibold font-mono tabular-nums text-[#5856d6] mt-1">
+                  {ionCalc.totalNeg}
+                </div>
+                <div className="text-[10.5px] text-[var(--text-tertiary)]">
+                  {ionCalc.saltPairs} salt + {ionCalc.totalNeg - ionCalc.saltPairs} neutral
+                </div>
+              </div>
+            </div>
+
+            <CodeShowcase
+              title="gmx genion Commands"
+              subtitle="Exact ion counts (-np/-nn) or automatic molarity (-conc)"
+              code={`# Explicit ion counts (accounts for ${soluteFraction}% solute excluded volume)\n${ionCalc.genionExactCmd}\n\n# Or let GROMACS compute molarity from box volume automatically:\n${ionCalc.genionAutoCmd}`}
+              language="bash"
+              compact
+              maxHeight="200px"
+            />
+          </div>
         </div>
       )}
     </section>
