@@ -32,6 +32,9 @@ export interface MdpConfig {
   refcoordScaling?: string;
   commGrps?: string;
   emtol?: number;
+  lincsIter?: number;
+  lincsOrder?: number;
+  epsilonR?: number;
   pull?: {
     group1: string;
     group2: string;
@@ -40,6 +43,21 @@ export interface MdpConfig {
     rate: number; // nm/ps (0.0 for umbrella window)
     k: number; // kJ / (mol nm^2)
     start: 'yes' | 'no';
+  };
+  fep?: {
+    coupleMoltype: string;
+    initLambdaState: number;
+    scAlpha: number;
+    scPower: number;
+    scSigma: number;
+    coupleIntramol: 'yes' | 'no';
+  };
+  awh?: {
+    start: number;
+    end: number;
+    forceConstant: number;
+    diffusion: number;
+    shareMultisim: 'yes' | 'no';
   };
 }
 
@@ -391,6 +409,170 @@ export const MDP_PRESETS: MdpPreset[] = [
       },
     },
   },
+  {
+    id: 'fep-alchemical-decoupling',
+    name: 'Alchemical FEP / ABFE (BAR/MBAR)',
+    subtitle: 'Soft-core λ-state ligand decoupling with full dH/dλ neighbor evaluation',
+    badge: 'FEP / MBAR',
+    source: 'GROMACS Free Energy & Alchemical Best Practice',
+    defaultTimeNs: 5,
+    config: {
+      title: 'Alchemical Free Energy Perturbation (ABFE Ligand Decoupling)',
+      integrator: 'sd',
+      dt: 0.002,
+      temperature: 298.15,
+      pressure: 1.0,
+      tcoupl: 'no',
+      pcoupl: 'C-rescale',
+      pcoupltype: 'isotropic',
+      tcGrps: 'System',
+      tauT: '2.0',
+      tauP: 5.0,
+      compressibility: '4.5e-5',
+      constraints: 'h-bonds',
+      cutoffScheme: 'Verlet',
+      nstlist: 40,
+      rcoulomb: 1.2,
+      rvdw: 1.2,
+      vdwModifier: 'Potential-shift-Verlet',
+      coulombtype: 'PME',
+      nstxoutCompressed: 5000,
+      nstenergy: 1000,
+      nstlog: 1000,
+      continuation: 'yes',
+      genVel: 'no',
+      dispCorr: 'EnerPres',
+      fep: {
+        coupleMoltype: 'LIG',
+        initLambdaState: 0,
+        scAlpha: 0.5,
+        scPower: 1,
+        scSigma: 0.3,
+        coupleIntramol: 'no',
+      },
+    },
+  },
+  {
+    id: 'awh-adaptive-bias',
+    name: 'AWH Adaptive Free Energy',
+    subtitle: 'Accelerated Weight Histogram native adaptive PMF (supports multi-walker -multidir)',
+    badge: 'AWH Bias',
+    source: 'GROMACS 2024 AWH Documentation',
+    defaultTimeNs: 50,
+    config: {
+      title: 'Accelerated Weight Histogram (AWH) Adaptive PMF Simulation',
+      integrator: 'md',
+      dt: 0.002,
+      temperature: 300,
+      pressure: 1.0,
+      tcoupl: 'V-rescale',
+      pcoupl: 'C-rescale',
+      pcoupltype: 'isotropic',
+      tcGrps: 'Protein Non-Protein',
+      tauT: '0.5 0.5',
+      tauP: 5.0,
+      compressibility: '4.5e-5',
+      constraints: 'h-bonds',
+      cutoffScheme: 'Verlet',
+      nstlist: 80,
+      rcoulomb: 1.0,
+      rvdw: 1.0,
+      coulombtype: 'PME',
+      nstxoutCompressed: 10000,
+      nstenergy: 5000,
+      nstlog: 5000,
+      continuation: 'yes',
+      genVel: 'no',
+      dispCorr: 'EnerPres',
+      pull: {
+        group1: 'Protein',
+        group2: 'LIG',
+        geometry: 'distance',
+        dim: 'Y Y Y',
+        rate: 0.0,
+        k: 1000,
+        start: 'no',
+      },
+      awh: {
+        start: 0.4,
+        end: 3.0,
+        forceConstant: 12800,
+        diffusion: 5e-5,
+        shareMultisim: 'yes',
+      },
+    },
+  },
+  {
+    id: 'martini3-coarse-grained',
+    name: 'Coarse-Grained Martini 3 (20 fs)',
+    subtitle: 'Reaction-field electrostatics (εr=15), 1.1 nm cutoffs & 20 fs integration timestep',
+    badge: 'Martini 3 CG',
+    source: 'Martini 3 Official GROMACS Parameters',
+    defaultTimeNs: 1000,
+    config: {
+      title: 'Martini 3 Coarse-Grained NPT Production MD',
+      integrator: 'md',
+      dt: 0.02,
+      temperature: 310,
+      pressure: 1.0,
+      tcoupl: 'V-rescale',
+      pcoupl: 'C-rescale',
+      pcoupltype: 'isotropic',
+      tcGrps: 'Protein Non-Protein',
+      tauT: '1.0 1.0',
+      tauP: 4.0,
+      compressibility: '3e-4',
+      constraints: 'none',
+      cutoffScheme: 'Verlet',
+      nstlist: 20,
+      rcoulomb: 1.1,
+      rvdw: 1.1,
+      vdwModifier: 'Potential-shift-Verlet',
+      coulombtype: 'reaction-field',
+      epsilonR: 15,
+      nstxoutCompressed: 5000,
+      nstenergy: 5000,
+      nstlog: 5000,
+      continuation: 'yes',
+      genVel: 'no',
+    },
+  },
+  {
+    id: 'hmr-4fs-production',
+    name: '4 fs HMR High-Throughput NPT',
+    subtitle: 'Hydrogen Mass Repartitioning (dt=0.004 ps) with lincs-iter=2 for 2× walltime reach',
+    badge: '4 fs HMR',
+    source: 'GROMACS HMR & NVIDIA GPU Best Practice',
+    defaultTimeNs: 500,
+    config: {
+      title: '4 fs Hydrogen Mass Repartitioning (HMR) GPU-Resident Production',
+      integrator: 'md',
+      dt: 0.004,
+      temperature: 300,
+      pressure: 1.0,
+      tcoupl: 'V-rescale',
+      pcoupl: 'C-rescale',
+      pcoupltype: 'isotropic',
+      tcGrps: 'Protein Non-Protein',
+      tauT: '0.5 0.5',
+      tauP: 5.0,
+      compressibility: '4.5e-5',
+      constraints: 'h-bonds',
+      cutoffScheme: 'Verlet',
+      nstlist: 100,
+      rcoulomb: 1.0,
+      rvdw: 1.0,
+      coulombtype: 'PME',
+      nstxoutCompressed: 12500,
+      nstenergy: 5000,
+      nstlog: 5000,
+      continuation: 'yes',
+      genVel: 'no',
+      dispCorr: 'EnerPres',
+      lincsIter: 2,
+      lincsOrder: 4,
+    },
+  },
 ];
 
 export function generateMdpText(cfg: MdpConfig): string {
@@ -432,10 +614,14 @@ export function generateMdpText(cfg: MdpConfig): string {
   lines.push(``);
   lines.push(`; Bond parameters`);
   lines.push(`continuation            = ${cfg.continuation}`);
-  lines.push(`constraint_algorithm    = lincs`);
-  lines.push(`constraints             = ${cfg.constraints}   ; Required as h-bonds for -update gpu`);
-  lines.push(`lincs_iter              = 1`);
-  lines.push(`lincs_order             = 4`);
+  if (cfg.constraints !== 'none') {
+    lines.push(`constraint_algorithm    = lincs`);
+    lines.push(`constraints             = ${cfg.constraints}   ; Required as h-bonds for -update gpu`);
+    lines.push(`lincs_iter              = ${cfg.lincsIter ?? 1}${cfg.dt >= 0.004 ? '         ; lincs_iter = 2 recommended for 4 fs HMR' : ''}`);
+    lines.push(`lincs_order             = ${cfg.lincsOrder ?? 4}`);
+  } else {
+    lines.push(`constraints             = none      ; Martini 3 uses harmonic bonds / constraints in .itp`);
+  }
 
   lines.push(``);
   lines.push(`; Neighbor searching & cutoffs`);
@@ -453,14 +639,19 @@ export function generateMdpText(cfg: MdpConfig): string {
   lines.push(``);
   lines.push(`; Electrostatics`);
   lines.push(`coulombtype             = ${cfg.coulombtype}`);
-  lines.push(`pme_order               = 4`);
-  lines.push(`fourierspacing          = 0.16`);
+  if (cfg.coulombtype.toLowerCase() === 'reaction-field') {
+    lines.push(`epsilon_r               = ${cfg.epsilonR ?? 15}        ; Relative dielectric constant (15 for Martini 3 water)`);
+    lines.push(`epsilon_rf              = 0         ; Infinite reaction-field dielectric`);
+  } else {
+    lines.push(`pme_order               = 4`);
+    lines.push(`fourierspacing          = 0.16`);
+  }
 
   if (!isEM) {
     lines.push(``);
     lines.push(`; Temperature coupling`);
-    lines.push(`tcoupl                  = ${cfg.tcoupl}`);
-    if (cfg.tcoupl !== 'no') {
+    lines.push(`tcoupl                  = ${cfg.tcoupl}${cfg.integrator === 'sd' ? '        ; Langevin sd integrator handles temperature control' : ''}`);
+    if (cfg.tcoupl !== 'no' || cfg.integrator === 'sd') {
       const grpCount = cfg.tcGrps.trim().split(/\s+/).length;
       const refT = Array(grpCount).fill(cfg.temperature).join(' ');
       lines.push(`tc-grps                 = ${cfg.tcGrps}`);
@@ -505,19 +696,60 @@ export function generateMdpText(cfg: MdpConfig): string {
 
     if (cfg.pull) {
       lines.push(``);
-      lines.push(`; Pull code (Steered MD / Umbrella Sampling)`);
+      lines.push(`; Pull code (${cfg.awh ? 'AWH Collective Variable' : 'Steered MD / Umbrella Sampling'})`);
       lines.push(`pull                    = yes`);
       lines.push(`pull-ncoords            = 1         ; Number of reaction coordinates`);
       lines.push(`pull-ngroups            = 2         ; Reference + pulled group`);
       lines.push(`pull-group1-name        = ${cfg.pull.group1}`);
       lines.push(`pull-group2-name        = ${cfg.pull.group2}`);
-      lines.push(`pull-coord1-type        = umbrella  ; Harmonic biasing potential`);
+      lines.push(`pull-coord1-type        = ${cfg.awh ? 'external-potential' : 'umbrella'}`);
+      if (cfg.awh) {
+        lines.push(`pull-coord1-potential-provider = awh`);
+      }
       lines.push(`pull-coord1-geometry    = ${cfg.pull.geometry}  ; Distance / direction / cylinder`);
       lines.push(`pull-coord1-dim         = ${cfg.pull.dim}     ; Pull axis components (X Y Z)`);
       lines.push(`pull-coord1-groups      = 1 2`);
       lines.push(`pull-coord1-start       = ${cfg.pull.start}       ; Use initial COM distance as reference`);
-      lines.push(`pull-coord1-rate        = ${cfg.pull.rate}      ; ${cfg.pull.rate === 0 ? '0.0 nm/ps (stationary umbrella window)' : `${cfg.pull.rate} nm/ps (${(cfg.pull.rate * 1000).toFixed(1)} nm/ns pulling speed)`}`);
-      lines.push(`pull-coord1-k           = ${cfg.pull.k}      ; Harmonic force constant (kJ mol^-1 nm^-2)`);
+      if (!cfg.awh) {
+        lines.push(`pull-coord1-rate        = ${cfg.pull.rate}      ; ${cfg.pull.rate === 0 ? '0.0 nm/ps (stationary umbrella window)' : `${cfg.pull.rate} nm/ps (${(cfg.pull.rate * 1000).toFixed(1)} nm/ns pulling speed)`}`);
+        lines.push(`pull-coord1-k           = ${cfg.pull.k}      ; Harmonic force constant (kJ mol^-1 nm^-2)`);
+      }
+    }
+
+    if (cfg.awh) {
+      lines.push(``);
+      lines.push(`; Accelerated Weight Histogram (AWH) adaptive biasing`);
+      lines.push(`awh                     = yes`);
+      lines.push(`awh-nbias               = 1`);
+      lines.push(`awh-nstout              = 50000     ; Write AWH PMF state to .edr`);
+      lines.push(`awh-share-multisim      = ${cfg.awh.shareMultisim}       ; Share bias across -multidir walkers`);
+      lines.push(`awh1-ndim               = 1`);
+      lines.push(`awh1-error-init         = 10.0      ; Initial free-energy error estimate (kJ/mol)`);
+      lines.push(`awh1-growth             = exp-linear`);
+      lines.push(`awh1-dim1-coord-index   = 1`);
+      lines.push(`awh1-dim1-start         = ${cfg.awh.start.toFixed(2)}      ; Lower bound along reaction coordinate (nm)`);
+      lines.push(`awh1-dim1-end           = ${cfg.awh.end.toFixed(2)}      ; Upper bound along reaction coordinate (nm)`);
+      lines.push(`awh1-dim1-force-constant = ${cfg.awh.forceConstant}   ; Umbrella stiffness (kJ mol^-1 nm^-2)`);
+      lines.push(`awh1-dim1-diffusion     = ${cfg.awh.diffusion.toExponential(1)}   ; Estimated diffusion coefficient (nm^2/ps)`);
+    }
+
+    if (cfg.fep) {
+      lines.push(``);
+      lines.push(`; Alchemical Free Energy Perturbation (FEP / ABFE / BAR / MBAR)`);
+      lines.push(`free-energy             = yes`);
+      lines.push(`couple-moltype          = ${cfg.fep.coupleMoltype}       ; Molecule type to decouple`);
+      lines.push(`couple-lambda0          = vdw-q     ; Fully interacting at state 0`);
+      lines.push(`couple-lambda1          = none      ; Fully decoupled at final state`);
+      lines.push(`couple-intramol         = ${cfg.fep.coupleIntramol}`);
+      lines.push(`init-lambda-state       = ${cfg.fep.initLambdaState}         ; Override per window (0..20)`);
+      lines.push(`coul-lambdas            = 0.00 0.20 0.40 0.60 0.80 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00`);
+      lines.push(`vdw-lambdas             = 0.00 0.00 0.00 0.00 0.00 0.00 0.05 0.10 0.20 0.30 0.40 0.50 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00`);
+      lines.push(`sc-alpha                = ${cfg.fep.scAlpha}       ; Soft-core LJ parameter to avoid end-point singularities`);
+      lines.push(`sc-power                = ${cfg.fep.scPower}`);
+      lines.push(`sc-sigma                = ${cfg.fep.scSigma}`);
+      lines.push(`calc-lambda-neighbors   = -1        ; Evaluate all λ states for MBAR`);
+      lines.push(`nstdhdl                 = 100       ; Write dH/dλ every 100 steps`);
+      lines.push(`separate-dhdl-file      = yes`);
     }
   } else {
     lines.push(``);
@@ -631,5 +863,31 @@ export const MDP_PARAM_DOCS: MdpParamDoc[] = [
     defaultValue: '1000 kJ mol⁻¹ nm⁻²',
     description: 'Harmonic spring force constant restraining the reaction coordinate. Ensure adjacent window histograms overlap cleanly in gmx wham.',
     tip: 'Increase k (e.g. 1500–2500) across steep barrier regions if histogram gaps appear.',
+  },
+  {
+    param: 'free-energy / sc-alpha / calc-lambda-neighbors',
+    category: 'Integration',
+    defaultValue: 'yes / 0.5 / -1',
+    description: 'Enables alchemical FEP/ABFE/RBFE decoupling with soft-core potentials (sc-alpha=0.5, sc-power=1) and full λ-matrix evaluation (-1) required for MBAR.',
+    tip: 'Pair with integrator = sd (stochastic Langevin dynamics) for robust decoupling temperature control.',
+  },
+  {
+    param: 'awh / awh-share-multisim',
+    category: 'Integration',
+    defaultValue: 'yes / yes',
+    description: 'Activates GROMACS native Accelerated Weight Histogram (AWH) adaptive biasing to sample PMFs without manually spacing dozens of umbrella windows.',
+    tip: 'Launch 4–8 walkers with gmx_mpi mdrun -multidir to share a single AWH bias and converge faster.',
+  },
+  {
+    param: 'coulombtype = reaction-field / epsilon_r = 15',
+    category: 'Cutoffs & PME',
+    defaultValue: 'Martini 3 CG standard',
+    description: 'Standard electrostatics setup for Martini 3 coarse-grained simulations with 1.1 nm cutoffs and 20 fs timesteps (dt = 0.02).',
+  },
+  {
+    param: 'lincs_iter (HMR 4 fs)',
+    category: 'Constraints',
+    defaultValue: '2 (for dt = 0.004)',
+    description: 'Increases LINCS constraint solver iterations to preserve bond-length accuracy and energy conservation when running 4 fs Hydrogen Mass Repartitioning (HMR).',
   },
 ];

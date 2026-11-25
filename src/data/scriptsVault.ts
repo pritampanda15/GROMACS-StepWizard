@@ -3,7 +3,7 @@ export type ScriptCategory =
   | 'NVIDIA GPU'
   | 'HPC & SLURM'
   | 'Workflows'
-  | 'Umbrella Sampling'
+  | 'Free Energy & Sampling'
   | 'Post-Processing'
   | 'PCA & FEL'
   | 'MM-PBSA / GBSA';
@@ -681,7 +681,7 @@ printf "0 & ! a H*\\nq\\n" | "\${GMX}" make_ndx -f lig.gro -o index_lig.ndx
     id: 'umbrella-sampling-pipeline',
     title: 'Steered MD → Umbrella Sampling → WHAM PMF',
     subtitle: 'Complete SMD pulling, COM distance spacing, GPU window runs, and bootstrapped gmx wham PMF',
-    category: 'Umbrella Sampling',
+    category: 'Free Energy & Sampling',
     filename: 'run_umbrella_sampling.sh',
     sourcePath: 'GROMACS Pull Code & CHAPERONg Umbrella Protocol',
     language: 'bash',
@@ -753,7 +753,7 @@ done
     id: 'slurm-umbrella-array',
     title: 'SLURM GPU Job Array for Umbrella Windows',
     subtitle: 'Runs all umbrella sampling windows concurrently across cluster GPUs via --array',
-    category: 'Umbrella Sampling',
+    category: 'Free Energy & Sampling',
     filename: 'slurm_umbrella_array.sh',
     sourcePath: 'GROMACS Pull Code & SLURM Job Array Best Practice',
     language: 'bash',
@@ -803,5 +803,280 @@ gmx mdrun -deffnm "umbrella\${WIN}" -pf "pullf-umbrella\${WIN}.xvg" -px "pullx-u
 #   ls -v umbrella*.tpr > tpr-files.dat
 #   ls -v pullf-umbrella*.xvg > pullf-files.dat
 #   gmx wham -it tpr-files.dat -if pullf-files.dat -o profile.xvg -hist histo.xvg -unit kCal -b 1000 -nBootstrap 200`,
+  },
+  {
+    id: 'slurm-fep-array',
+    title: 'Alchemical FEP / ABFE λ-Window SLURM Array',
+    subtitle: 'Runs 21 λ-windows in parallel on GPUs and computes ΔG via gmx bar & alchemlyb MBAR',
+    category: 'Free Energy & Sampling',
+    filename: 'slurm_fep_array.sh',
+    sourcePath: 'GROMACS Free Energy & BAR/MBAR Protocol',
+    language: 'bash',
+    badges: ['FEP / ABFE', 'SLURM Array', 'gmx bar', 'MBAR'],
+    params: [
+      { key: 'ACCOUNT', label: 'SLURM Account', defaultValue: 'YOUR_ALLOCATION' },
+      { key: 'MAX_LAMBDA', label: 'Last λ Index (0..N)', defaultValue: '20' },
+      { key: 'NTOMP', label: 'OpenMP Threads', defaultValue: '8' },
+      { key: 'MDP_TMPL', label: 'FEP MDP Template', defaultValue: 'fep_lambda.mdp' },
+    ],
+    renderContent: (v) => `#!/usr/bin/env bash
+# =============================================================================
+# SLURM GPU Job Array: Alchemical FEP / ABFE (λ states 0..${v.MAX_LAMBDA})
+# =============================================================================
+#SBATCH --job-name=fep_lam
+#SBATCH --array=0-${v.MAX_LAMBDA}
+#SBATCH --time=08:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=${v.NTOMP}
+#SBATCH --gpus-per-node=1
+#SBATCH --account=${v.ACCOUNT}
+#SBATCH --output=logs/fep_%A_%a.out
+
+set -euo pipefail
+mkdir -p logs
+module load GROMACS/2024.2-CUDA
+
+LAM="\${SLURM_ARRAY_TASK_ID}"
+DIR="lambda_\${LAM}"
+mkdir -p "\${DIR}"
+
+# Generate window-specific MDP by injecting init-lambda-state = \${LAM}
+sed "s/^init-lambda-state.*/init-lambda-state       = \${LAM}/" "${v.MDP_TMPL}" > "\${DIR}/fep.mdp"
+
+export GMX_ENABLE_DIRECT_GPU_COMM=1
+cd "\${DIR}"
+
+gmx grompp -f fep.mdp -c ../npt.gro -t ../npt.cpt -p ../topol.top -o fep.tpr -maxwarn 1
+gmx mdrun -v -deffnm fep -dhdl dhdl.xvg \\
+    -ntmpi 1 -ntomp ${v.NTOMP} -nb gpu -pme gpu -bonded gpu -pin on
+
+# After all λ windows finish, run BAR / MBAR from the parent directory:
+#   gmx bar -f lambda_*/dhdl.xvg -o bar.xvg -oi barint.xvg -oh histogram.xvg
+#   python -c "import glob; from alchemlyb.parsing.gmx import extract_u_nk; from alchemlyb.estimators import MBAR; ..."`,
+  },
+  {
+    id: 'awh-multiwalker',
+    title: 'Multi-Walker AWH Adaptive Free Energy Runner',
+    subtitle: 'Launches shared-bias AWH walkers via -multidir and extracts PMF via gmx awh',
+    category: 'Free Energy & Sampling',
+    filename: 'run_awh_multiwalker.sh',
+    sourcePath: 'GROMACS 2024 AWH Multi-Walker Protocol',
+    language: 'bash',
+    badges: ['AWH', '-multidir', 'gmx awh', 'NVIDIA GPU'],
+    params: [
+      { key: 'WALKERS', label: 'Number of Walkers', defaultValue: '4' },
+      { key: 'NTOMP', label: 'OpenMP Threads / Walker', defaultValue: '4' },
+      { key: 'MDP', label: 'AWH MDP File', defaultValue: 'awh_md.mdp' },
+    ],
+    renderContent: (v) => `#!/usr/bin/env bash
+# =============================================================================
+# Multi-Walker Accelerated Weight Histogram (AWH) with Shared Bias (-multidir)
+# =============================================================================
+set -euo pipefail
+
+WALKERS=${v.WALKERS}
+NTOMP=${v.NTOMP}
+export GMX_ENABLE_DIRECT_GPU_COMM=1
+
+DIRS=()
+for ((i = 0; i < WALKERS; i++)); do
+    d="walker_\${i}"
+    mkdir -p "\${d}"
+    gmx_mpi grompp -f "${v.MDP}" -c npt.gro -p topol.top -n index.ndx -o "\${d}/awh.tpr"
+    DIRS+=("\${d}")
+done
+
+# Launch shared-bias multi-walker AWH run
+mpirun -np "\${WALKERS}" gmx_mpi mdrun \\
+    -multidir "\${DIRS[@]}" \\
+    -deffnm awh -ntomp "\${NTOMP}" \\
+    -nb gpu -pme gpu -bonded gpu -update gpu -pin on
+
+# Extract converged PMF & friction metric from walker_0
+gmx_mpi awh -f walker_0/awh.edr -s walker_0/awh.tpr -o pmf.xvg -more`,
+  },
+  {
+    id: 'tremd-multidir',
+    title: 'Temperature Replica Exchange MD (T-REMD)',
+    subtitle: 'Generates exponential temperature ladder, launches -multidir -replex & demuxes trajectories',
+    category: 'Free Energy & Sampling',
+    filename: 'run_tremd_multidir.sh',
+    sourcePath: 'GROMACS Replica Exchange Protocol',
+    language: 'bash',
+    badges: ['T-REMD', '-replex', '-multidir', 'Demux'],
+    params: [
+      { key: 'N_REP', label: 'Number of Replicas', defaultValue: '8' },
+      { key: 'T_MIN', label: 'Min Temp (K)', defaultValue: '300' },
+      { key: 'T_MAX', label: 'Max Temp (K)', defaultValue: '380' },
+      { key: 'REPLEX', label: 'Exchange Steps (-replex)', defaultValue: '500' },
+      { key: 'NTOMP', label: 'OpenMP Threads / Replica', defaultValue: '4' },
+    ],
+    renderContent: (v) => `#!/usr/bin/env bash
+# =============================================================================
+# Temperature Replica Exchange MD (T-REMD) — ${v.N_REP} Replicas (${v.T_MIN}–${v.T_MAX} K)
+# =============================================================================
+set -euo pipefail
+
+N_REP=${v.N_REP}
+T_MIN=${v.T_MIN}
+T_MAX=${v.T_MAX}
+REPLEX=${v.REPLEX}
+NTOMP=${v.NTOMP}
+
+# 1. Build geometric temperature ladder & compile per-replica TPR files
+DIRS=()
+for ((i = 0; i < N_REP; i++)); do
+    T=$(awk -v t0="\${T_MIN}" -v t1="\${T_MAX}" -v n="\${N_REP}" -v k="\${i}" 'BEGIN { printf "%.2f", t0 * exp(k * log(t1 / t0) / (n - 1)) }')
+    d="rep_\${i}"
+    mkdir -p "\${d}"
+    sed "s/^ref_t.*/ref_t                   = \${T} \${T}/" production.mdp > "\${d}/remd.mdp"
+    gmx_mpi grompp -f "\${d}/remd.mdp" -c npt.gro -p topol.top -o "\${d}/remd.tpr"
+    DIRS+=("\${d}")
+    echo "Replica \${i}: T = \${T} K"
+done
+
+# 2. Run synchronized T-REMD across all replicas
+export GMX_ENABLE_DIRECT_GPU_COMM=1
+mpirun -np "\${N_REP}" gmx_mpi mdrun \\
+    -multidir "\${DIRS[@]}" \\
+    -deffnm remd -replex "\${REPLEX}" \\
+    -ntomp "\${NTOMP}" -nb gpu -pme gpu -bonded gpu -update gpu -pin on
+
+# 3. Inspect exchange probabilities & demultiplex continuous trajectories
+grep -A 10 "Repl  average probabilities" rep_0/remd.log || true
+# demux.pl rep_0/remd.log
+# gmx_mpi trjcat -f rep_*/remd.xtc -demux replica_index.xvg -o continuous.xtc`,
+  },
+  {
+    id: 'martini3-cg',
+    title: 'Martini 3 Coarse-Grained Setup & 20 fs MD',
+    subtitle: 'All-atom to Martini 3 CG via martinize2 + insane.py + GPU minimization/equil/production',
+    category: 'Workflows',
+    filename: 'run_martini3_cg.sh',
+    sourcePath: 'Martini 3 Coarse-Grained GROMACS Protocol',
+    language: 'bash',
+    badges: ['Martini 3', '20 fs', 'martinize2', 'Coarse-Grained'],
+    params: [
+      { key: 'PDB', label: 'Input All-Atom PDB', defaultValue: 'protein.pdb' },
+      { key: 'BOX_NM', label: 'Cubic Box (nm)', defaultValue: '10' },
+      { key: 'SALT', label: 'NaCl Conc. (M)', defaultValue: '0.15' },
+      { key: 'EF', label: 'Elastic Network Force', defaultValue: '700' },
+    ],
+    renderContent: (v) => `#!/usr/bin/env bash
+# =============================================================================
+# Martini 3 Coarse-Grained MD Pipeline (martinize2 -> insane -> 20 fs GROMACS)
+# Prerequisites: pip install vermouth martinize2 insane
+# =============================================================================
+set -euo pipefail
+
+# 1. Coarse-grain protein with Martini 3 & elastic network (requires DSSP)
+martinize2 -f "${v.PDB}" \\
+    -o topol.top -x protein_cg.pdb \\
+    -ff martini3001 -dssp \\
+    -elastic -ef ${v.EF} -el 0.5 -eu 0.9 -ea 0 -ep 0
+
+# 2. Solvate in Martini 3 water (W) + ${v.SALT} M NaCl using insane (or gmx solvate)
+insane -f protein_cg.pdb -o system_cg.gro -p topol.top \\
+    -box ${v.BOX_NM},${v.BOX_NM},${v.BOX_NM} -sol W -salt ${v.SALT} -charge auto
+
+# 3. Energy Minimization
+gmx grompp -f minim_cg.mdp -c system_cg.gro -p topol.top -o em.tpr -maxwarn 1
+gmx mdrun -v -deffnm em
+
+# 4. Equilibration (10 fs) & Production (20 fs, reaction-field εr=15)
+gmx grompp -f martini3_prod.mdp -c em.gro -p topol.top -o md_cg.tpr -maxwarn 1
+gmx mdrun -v -deffnm md_cg -nb gpu -bonded gpu -update gpu -nstlist 40 -pin on`,
+  },
+  {
+    id: 'plumed-wtmetad',
+    title: 'PLUMED Well-Tempered Metadynamics (plumed.dat)',
+    subtitle: 'Collective variable distance definition, Gaussian deposition, wall restraint & sum_hills',
+    category: 'Free Energy & Sampling',
+    filename: 'plumed_wtmetad.dat',
+    sourcePath: 'GROMACS + PLUMED Well-Tempered Metadynamics',
+    language: 'ini',
+    badges: ['PLUMED', 'WT-MetaD', 'sum_hills', 'FES'],
+    params: [
+      { key: 'ATOMS1', label: 'Pocket COM Atoms', defaultValue: '1-250' },
+      { key: 'ATOMS2', label: 'Ligand COM Atoms', defaultValue: '3500-3542' },
+      { key: 'PACE', label: 'Hill Pace (steps)', defaultValue: '500' },
+      { key: 'HEIGHT', label: 'Hill Height (kJ/mol)', defaultValue: '1.2' },
+      { key: 'SIGMA', label: 'Gaussian Sigma (nm)', defaultValue: '0.05' },
+      { key: 'BIASFACTOR', label: 'Bias Factor (γ)', defaultValue: '10' },
+      { key: 'TEMP', label: 'Temperature (K)', defaultValue: '300' },
+    ],
+    renderContent: (v) => `# PLUMED Well-Tempered Metadynamics Input (plumed.dat)
+# Run with:
+#   gmx mdrun -v -deffnm metad -plumed plumed_wtmetad.dat -nb gpu -pme gpu -bonded gpu -update gpu
+# Reconstruct 1D FES:
+#   plumed sum_hills --hills HILLS --mintozero --outfile fes.dat
+
+UNITS LENGTH=nm TIME=ps ENERGY=kj/mol
+
+# Reassemble broken molecules across PBC before computing COMs
+WHOLEMOLECULES ENTITY0=${v.ATOMS1} ENTITY1=${v.ATOMS2}
+
+c1: COM ATOMS=${v.ATOMS1}
+c2: COM ATOMS=${v.ATOMS2}
+d1: DISTANCE ATOMS=c1,c2
+
+# Optional upper wall to keep ligand within sampling radius (3.0 nm)
+uwall: UPPER_WALLS ARG=d1 AT=3.0 KAPPA=500.0 EXP=2 EPS=1 OFFSET=0
+
+# Well-Tempered Metadynamics bias along COM distance d1
+metad: METAD ...
+    ARG=d1
+    PACE=${v.PACE}
+    HEIGHT=${v.HEIGHT}
+    SIGMA=${v.SIGMA}
+    BIASFACTOR=${v.BIASFACTOR}
+    TEMP=${v.TEMP}
+    FILE=HILLS
+    GRID_MIN=0.0
+    GRID_MAX=3.5
+    GRID_BIN=350
+...
+
+PRINT ARG=d1,metad.bias,uwall.bias STRIDE=500 FILE=COLVAR`,
+  },
+  {
+    id: 'hmr-4fs-prep',
+    title: '4 fs Hydrogen Mass Repartitioning (HMR) Setup',
+    subtitle: 'Repartitions H masses via ParmEd (or -vsite hydrogens) to run stable dt = 4 fs GPU MD',
+    category: 'Workflows',
+    filename: 'prepare_hmr_4fs.sh',
+    sourcePath: 'GROMACS 4 fs HMR & Virtual Sites Protocol',
+    language: 'bash',
+    badges: ['4 fs HMR', 'ParmEd', 'Virtual Sites', '2× Speedup'],
+    params: [
+      { key: 'TOP_IN', label: 'Input Topology', defaultValue: 'topol.top' },
+      { key: 'TOP_OUT', label: 'Output HMR Topology', defaultValue: 'topol_hmr.top' },
+      { key: 'HMASS', label: 'Target H Mass (amu)', defaultValue: '3.024' },
+      { key: 'MDP', label: '4 fs MDP File', defaultValue: 'production_hmr_4fs.mdp' },
+    ],
+    renderContent: (v) => `#!/usr/bin/env bash
+# =============================================================================
+# Hydrogen Mass Repartitioning (HMR) for Stable 4 fs GROMACS Simulations
+# Prerequisite: pip install parmed
+# =============================================================================
+set -euo pipefail
+
+# Option A: Repartition hydrogen masses to ${v.HMASS} amu using ParmEd
+python3 - <<'PY'
+import parmed as pmd
+top = pmd.load_file("${v.TOP_IN}")
+pmd.tools.HMassRepartition(top, ${v.HMASS}).execute()
+top.save("${v.TOP_OUT}", overwrite=True)
+print("Saved HMR topology -> ${v.TOP_OUT}")
+PY
+
+# Option B (Alternative without ParmEd): Build virtual-site hydrogens directly in GROMACS:
+#   gmx pdb2gmx -f protein.pdb -o processed.gro -vsite hydrogens -ignh
+
+# Compile & run 4 fs GPU-resident production (requires lincs_iter = 2 in ${v.MDP})
+gmx grompp -f "${v.MDP}" -c npt.gro -t npt.cpt -p "${v.TOP_OUT}" -o md_hmr.tpr
+gmx mdrun -v -deffnm md_hmr \\
+    -nb gpu -pme gpu -bonded gpu -update gpu -nstlist 100 -pin on`,
   },
 ];

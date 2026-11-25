@@ -9,7 +9,7 @@ const CATEGORIES: ScriptCategory[] = [
   'NVIDIA GPU',
   'HPC & SLURM',
   'Workflows',
-  'Umbrella Sampling',
+  'Free Energy & Sampling',
   'Post-Processing',
   'PCA & FEL',
   'MM-PBSA / GBSA',

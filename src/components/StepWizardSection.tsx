@@ -83,6 +83,13 @@ export const StepWizardSection: React.FC<{
   const [pullRate, setPullRate] = useState<number>(0.01);
   const [pullK, setPullK] = useState<number>(1000);
   const [pullDim, setPullDim] = useState<string>('N N Y');
+  const [fepMoltype, setFepMoltype] = useState<string>('LIG');
+  const [fepLambdaState, setFepLambdaState] = useState<number>(0);
+  const [fepScAlpha, setFepScAlpha] = useState<number>(0.5);
+  const [awhStart, setAwhStart] = useState<number>(0.4);
+  const [awhEnd, setAwhEnd] = useState<number>(3.0);
+  const [awhK, setAwhK] = useState<number>(12800);
+  const [awhShare, setAwhShare] = useState<'yes' | 'no'>('yes');
 
   // HPC Walltime & Storage Estimator state
   const [atoms, setAtoms] = useState<number>(65000);
@@ -116,6 +123,17 @@ export const StepWizardSection: React.FC<{
       setPullRate(p.config.pull.rate);
       setPullK(p.config.pull.k);
       setPullDim(p.config.pull.dim);
+    }
+    if (p.config.fep) {
+      setFepMoltype(p.config.fep.coupleMoltype);
+      setFepLambdaState(p.config.fep.initLambdaState);
+      setFepScAlpha(p.config.fep.scAlpha);
+    }
+    if (p.config.awh) {
+      setAwhStart(p.config.awh.start);
+      setAwhEnd(p.config.awh.end);
+      setAwhK(p.config.awh.forceConstant);
+      setAwhShare(p.config.awh.shareMultisim);
     }
     if (id === 'charmm36-lipid-bilayer') setAtoms(250000);
     onTelemetryChange?.(p.config.dt * 1000, p.config.temperature);
@@ -186,6 +204,23 @@ export const StepWizardSection: React.FC<{
             dim: pullDim,
           }
         : undefined,
+      fep: preset.config.fep
+        ? {
+            ...preset.config.fep,
+            coupleMoltype: fepMoltype,
+            initLambdaState: fepLambdaState,
+            scAlpha: fepScAlpha,
+          }
+        : undefined,
+      awh: preset.config.awh
+        ? {
+            ...preset.config.awh,
+            start: awhStart,
+            end: awhEnd,
+            forceConstant: awhK,
+            shareMultisim: awhShare,
+          }
+        : undefined,
     }),
     [
       preset,
@@ -203,6 +238,13 @@ export const StepWizardSection: React.FC<{
       pullRate,
       pullK,
       pullDim,
+      fepMoltype,
+      fepLambdaState,
+      fepScAlpha,
+      awhStart,
+      awhEnd,
+      awhK,
+      awhShare,
     ]
   );
 
@@ -215,6 +257,14 @@ export const StepWizardSection: React.FC<{
       ? 'md_pull.mdp'
       : preset.id === 'umbrella-sampling-window'
       ? 'md_umbrella.mdp'
+      : preset.id === 'fep-alchemical-decoupling'
+      ? 'fep_lambda.mdp'
+      : preset.id === 'awh-adaptive-bias'
+      ? 'awh_md.mdp'
+      : preset.id === 'martini3-coarse-grained'
+      ? 'martini3_prod.mdp'
+      : preset.id === 'hmr-4fs-production'
+      ? 'production_hmr_4fs.mdp'
       : preset.id === 'energy-minimization'
       ? 'minim.mdp'
       : preset.id === 'nvt-equilibration'
@@ -225,8 +275,14 @@ export const StepWizardSection: React.FC<{
 
   const companionCmd = isEM
     ? `gmx grompp -f ${mdpFilename} -c solv_ions.gro -p topol.top -o em.tpr\ngmx mdrun -v -deffnm em`
+    : preset.config.fep
+    ? `gmx grompp -f ${mdpFilename} -c npt.gro -t npt.cpt -p topol.top -o fep_${fepLambdaState}.tpr\ngmx mdrun -v -deffnm fep_${fepLambdaState} -dhdl dhdl_${fepLambdaState}.xvg -nb gpu -pme gpu -bonded gpu -pin on`
+    : preset.config.awh
+    ? `mpirun -np 4 gmx_mpi mdrun -multidir walker_{0..3} -deffnm awh -nb gpu -pme gpu -bonded gpu -update gpu -pin on\ngmx_mpi awh -f walker_0/awh.edr -s walker_0/awh.tpr -o pmf.xvg -more`
     : preset.config.pull
     ? `gmx grompp -f ${mdpFilename} -c npt.gro -r npt.gro -t npt.cpt -p topol.top -n index.ndx -o ${preset.id === 'steered-md-pull' ? 'pull' : 'umbrella0'}.tpr\ngmx mdrun -v -deffnm ${preset.id === 'steered-md-pull' ? 'pull' : 'umbrella0'} -pf pullf.xvg -px pullx.xvg -nb gpu -pme gpu -bonded gpu -update gpu -pin on`
+    : preset.id === 'martini3-coarse-grained'
+    ? `gmx grompp -f ${mdpFilename} -c em.gro -p topol.top -o md_cg.tpr -maxwarn 1\ngmx mdrun -v -deffnm md_cg -nb gpu -bonded gpu -update gpu -nstlist 40 -pin on`
     : `gmx grompp -f ${mdpFilename} -c npt.gro -t npt.cpt -p topol.top -o md_0_1.tpr\ngmx mdrun -v -deffnm md_0_1 -nb gpu -pme gpu -bonded gpu -update gpu -nstlist ${Math.max(nstlist, 40)} -pin on -maxh ${slurmMaxh}`;
 
   const handleDownloadKit = async () => {
@@ -505,7 +561,8 @@ export const StepWizardSection: React.FC<{
                 options={[
                   { value: '0.001', label: '1 fs' },
                   { value: '0.002', label: '2 fs' },
-                  { value: '0.004', label: '4 fs HMR' },
+                  { value: '0.004', label: '4 fs' },
+                  { value: '0.02', label: '20 fs CG' },
                 ]}
               />
             </div>
@@ -688,6 +745,112 @@ export const StepWizardSection: React.FC<{
                     <option value="Y Y Y">Y Y Y (3D radial distance)</option>
                     <option value="Y N N">Y N N (X-axis only)</option>
                     <option value="N Y N">N Y N (Y-axis only)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {preset.config.fep && (
+            <div className="pt-2 border-t border-[var(--border-hairline)] space-y-3">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--accent-blue)]">
+                Alchemical FEP / ABFE Parameters
+              </div>
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    couple-moltype
+                  </label>
+                  <input
+                    value={fepMoltype}
+                    onChange={(e) => setFepMoltype(e.target.value)}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    λ State (0–20)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={20}
+                    value={fepLambdaState}
+                    onChange={(e) => setFepLambdaState(Math.min(20, Math.max(0, Number(e.target.value))))}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    sc-alpha
+                  </label>
+                  <input
+                    type="number"
+                    step={0.1}
+                    min={0}
+                    max={1}
+                    value={fepScAlpha}
+                    onChange={(e) => setFepScAlpha(Number(e.target.value))}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {preset.config.awh && (
+            <div className="pt-2 border-t border-[var(--border-hairline)] space-y-3">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--accent-blue)]">
+                AWH Adaptive Biasing Range
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    Start (nm)
+                  </label>
+                  <input
+                    type="number"
+                    step={0.1}
+                    value={awhStart}
+                    onChange={(e) => setAwhStart(Number(e.target.value))}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    End (nm)
+                  </label>
+                  <input
+                    type="number"
+                    step={0.1}
+                    value={awhEnd}
+                    onChange={(e) => setAwhEnd(Number(e.target.value))}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    Force k (kJ/mol/nm²)
+                  </label>
+                  <input
+                    type="number"
+                    step={1000}
+                    value={awhK}
+                    onChange={(e) => setAwhK(Number(e.target.value))}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11.5px] font-medium text-[var(--text-secondary)]">
+                    Share Multisim
+                  </label>
+                  <select
+                    value={awhShare}
+                    onChange={(e) => setAwhShare(e.target.value as 'yes' | 'no')}
+                    className="ui-input w-full px-3 py-1.5 text-[12.5px] font-mono mt-1"
+                  >
+                    <option value="yes">yes (-multidir walkers)</option>
+                    <option value="no">no (single walker)</option>
                   </select>
                 </div>
               </div>
