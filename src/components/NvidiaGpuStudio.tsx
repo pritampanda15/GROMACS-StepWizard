@@ -242,9 +242,11 @@ export const NvidiaGpuStudio: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-5 overflow-x-auto pb-1">
+        <div className="mt-5">
           <SegmentedControl<GpuScenario>
             layoutId="nvidia-scenario-seg"
+            wrap
+            className="w-fit max-w-full"
             value={scenario}
             onChange={selectScenario}
             options={[

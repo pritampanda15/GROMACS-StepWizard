@@ -631,35 +631,32 @@ export const AnalyzerSection: React.FC = () => {
 
   return (
     <section className="space-y-6">
-      <div className="surface-card p-5 sm:p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)] inline-flex items-center gap-1.5">
-              <FileSearch className="w-3.5 h-3.5" /> Client-Side File Diagnostics
-            </span>
-            <h2 className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.025em] text-[var(--text-primary)]">
-              Inspector, Error Troubleshooter &amp; Ion Calculator
-            </h2>
-            <p className="text-[13.5px] text-[var(--text-secondary)] mt-1">
-              100% local in-browser diagnostics — lint `.mdp` files, plot `.xvg` / `md.log`, debug common GROMACS crashes, and compute exact box ion counts.
-            </p>
-          </div>
-
-          <div className="overflow-x-auto pb-1">
-            <SegmentedControl<InspectorMode>
-              layoutId="inspector-mode-seg"
-              size="sm"
-              value={mode}
-              onChange={setMode}
-              options={[
-                { value: 'mdp', label: 'MDP Linter', icon: <Wand2 className="w-3.5 h-3.5" /> },
-                { value: 'xvg', label: 'XVG / md.log', icon: <Activity className="w-3.5 h-3.5" /> },
-                { value: 'troubleshooter', label: 'Crash Fixes', icon: <Bug className="w-3.5 h-3.5" /> },
-                { value: 'ions', label: 'Box & Ions', icon: <Box className="w-3.5 h-3.5" /> },
-              ]}
-            />
-          </div>
+      <div className="surface-card p-5 sm:p-6 space-y-4">
+        <div>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-blue)] inline-flex items-center gap-1.5">
+            <FileSearch className="w-3.5 h-3.5" /> Client-Side File Diagnostics
+          </span>
+          <h2 className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.025em] text-[var(--text-primary)]">
+            Inspector, Error Troubleshooter &amp; Ion Calculator
+          </h2>
+          <p className="text-[13.5px] text-[var(--text-secondary)] mt-1">
+            100% local in-browser diagnostics — lint `.mdp` files, plot `.xvg` / `md.log`, debug common GROMACS crashes, and compute exact box ion counts.
+          </p>
         </div>
+
+        <SegmentedControl<InspectorMode>
+          layoutId="inspector-mode-seg"
+          wrap
+          className="w-fit max-w-full"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'mdp', label: 'MDP Linter', icon: <Wand2 className="w-3.5 h-3.5" /> },
+            { value: 'xvg', label: 'XVG / md.log', icon: <Activity className="w-3.5 h-3.5" /> },
+            { value: 'troubleshooter', label: 'Crash Fixes', icon: <Bug className="w-3.5 h-3.5" /> },
+            { value: 'ions', label: 'Box & Ions', icon: <Box className="w-3.5 h-3.5" /> },
+          ]}
+        />
       </div>
 
       {mode === 'mdp' ? (

@@ -612,9 +612,12 @@ export const CommandBuilderSection: React.FC = () => {
           />
         </div>
 
-        <div className="mt-5 overflow-x-auto pb-1">
+        <div className="mt-5">
           <SegmentedControl<BuilderTab>
             layoutId="cli-builder-tab"
+            size="sm"
+            wrap
+            className="w-full"
             value={tab}
             onChange={setTab}
             options={[

@@ -22,6 +22,7 @@ export function SegmentedControl<T extends string>({
   layoutId,
   className = '',
   size = 'md',
+  wrap = false,
 }: {
   options: SegmentedOption<T>[];
   value: T;
@@ -29,10 +30,13 @@ export function SegmentedControl<T extends string>({
   layoutId: string;
   className?: string;
   size?: 'sm' | 'md';
+  wrap?: boolean;
 }) {
   return (
     <div
-      className={`inline-flex items-center p-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-subtle)] ${className}`}
+      className={`${
+        wrap ? 'flex flex-wrap gap-1 rounded-[18px]' : 'inline-flex rounded-full'
+      } items-center p-1 border border-[var(--border-hairline)] bg-[var(--bg-subtle)] ${className}`}
       role="tablist"
     >
       {options.map((opt) => {
